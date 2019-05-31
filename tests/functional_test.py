@@ -28,6 +28,11 @@ class FunctionalTestCase(unittest.TestCase):
         self.tables['music']['Prince', 'Purple Rain'] = {'released': 1984, 'album': 'Purple Rain'}
         self.assertEqual(self.tables['music']['Prince', 'Purple Rain']['released'], 1984)
 
+    def test_insert_record_in_table_without_sort_key(self):
+        self.tables['music'] = self.dyno(table_name='music', partition_key=('artist', 'str',))
+        self.tables['music']['Prince - Purple Rain'] = {'released': 1984, 'album': 'Purple Rain'}
+        self.assertEqual(self.tables['music']['Prince - Purple Rain']['released'], 1984)
+
 
 
 if __name__ == '__main__':
