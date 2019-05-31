@@ -44,12 +44,19 @@ def DYNAMODB_DATATYPES_REVERSE_LOOKUP(db_type, value):
                 return str
 
 class DynoTable(object):
-    """
+    """ DynoTable is a wrapper class around botocore. Each instance references a table in DynamoDB
+        and mimics the behaviour python dict for simple opperations such as:
+         * inserting records
+         * retrieving records by id
+         * deleting records
+
+        More advanced features are handled more like list functions:
+         * filtering by non primary key attributes
+         * bulk inserting or updates
 
     """
 
     def __init__(self, client, table_name, partition_key, sort_key=None, **attributes):
-        # name: value - type(value) = datatype
         self.client = client
         self.table_name = table_name
         self.partition_key = partition_key
