@@ -23,17 +23,20 @@ class FunctionalTestCase(unittest.TestCase):
         del self.tables['music']
         self.assertNotIn('music1', self.dyno.keys())
 
-    def test_insert_record_in_table_with_sort_key(self):
+    def test_insert_record_with_sort_key(self):
         self.tables['music'] = self.dyno(table_name='music', partition_key=('artist', 'str',), sort_key=('song', 'str',))
         self.tables['music']['Prince', 'Purple Rain'] = {'released': 1984, 'album': 'Purple Rain'}
         self.assertEqual(self.tables['music']['Prince', 'Purple Rain']['released'], 1984)
 
-    def test_insert_record_in_table_without_sort_key(self):
+    def test_insert_record_without_sort_key(self):
         self.tables['music'] = self.dyno(table_name='music', partition_key=('artist', 'str',))
         self.tables['music']['Prince - Purple Rain'] = {'released': 1984, 'album': 'Purple Rain'}
         self.assertEqual(self.tables['music']['Prince - Purple Rain']['released'], 1984)
 
-
+    def test_insert_record_with_sort_key_but_retreive_without(self):
+        self.tables['music'] = self.dyno(table_name='music', partition_key=('artist', 'str',), sort_key=('song', 'str',))
+        self.tables['music']['Prince', 'Purple Rain'] = {'released': 1984, 'album': 'Purple Rain'}
+        self.assertEqual(self.tables['music']['Prince - Purple Rain']['released'], 1984)
 
 if __name__ == '__main__':
     unittest.main()
