@@ -98,7 +98,7 @@ class DynoTable(object):
     def __del__(self):
         try:
             self.client.delete_table(TableName=self.table_name)
-            logger.warning('deleted %s' % self.table_name)
+            logger.info('deleted %s' % self.table_name)
         except ReferenceError:
             pass
 
@@ -112,13 +112,13 @@ class DynoTable(object):
         }
         items[self.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.partition_key[1]]: str(partition_key_value) }
         items[self.sort_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.sort_key[1]]: str(sort_key_value) }
-        logger.info(items)
+        # logger.info(items)
         
         response = self.client.put_item(
             TableName=self.table_name,
             Item=items
         )
-        logger.info(response)
+        # logger.info(response)
         return response
 
     def __getitem__(self, key):
@@ -130,6 +130,9 @@ class DynoTable(object):
                 self.sort_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.sort_key[1]]: sort_key_value }
             }
         )
+        logger.info(response['Item'])
+        response = { k: DYNAMODB_DATATYPES_REVERSE_LOOKUP(list(v)[0], list(v.values())[0])(list(v.values())[0]) for k, v in response['Item'].items() }
+        logger.info(response)
         return response
 
 
