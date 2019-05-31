@@ -44,6 +44,9 @@ def DYNAMODB_DATATYPES_REVERSE_LOOKUP(db_type, value):
                 return str
 
 class DynoTable(object):
+    """
+
+    """
 
     def __init__(self, client, table_name, partition_key, sort_key=None, **attributes):
         # name: value - type(value) = datatype
@@ -96,99 +99,137 @@ class DynoTable(object):
             self.describe = description
 
     def __del__(self):
+        """ Deletes the referenced table from DynamoDB
+
+        Parameters:
+        None
+
+        Return:
+        None
+
+        """
         try:
             self.client.delete_table(TableName=self.table_name)
             logger.info('deleted %s' % self.table_name)
         except ReferenceError:
+            # This method is always called when the class is destroyed
+            # if it is not called explicitly it will raise a ReferenceError
             pass
 
     def __setitem__(self, key, attributes):
-        partition_key_value, sort_key_value = key
+        """ Inserts a new record or updates an existing one
+
+        Parameters:
+        key (tuple/string): can be a tuple if a composite key is used as primary key
+            otherwise a string containing the partition key
+        atttributes (dict): additional attributes
+
+        Return:
+        None: It is an assignment operator so cannot return a response
+
+        """
         items = {
-            attribute_name: 
+            attribute_name:
             {
                 DYNAMODB_DATATYPES_LOOKUP[type(attribute_value).__name__]: str(attribute_value)
             } for attribute_name, attribute_value in attributes.items()
         }
-        items[self.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.partition_key[1]]: str(partition_key_value) }
-        items[self.sort_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.sort_key[1]]: str(sort_key_value) }
-        # logger.info(items)
+
+        try:
+            partition_key_value, sort_key_value = key
+            items[self.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.partition_key[1]]: str(partition_key_value) }
+            items[self.sort_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.sort_key[1]]: str(sort_key_value) }
+        except ValueError:
+            partition_key_value, sort_key_value = (key, None,)
+            items[self.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.partition_key[1]]: str(partition_key_value) }
         
         response = self.client.put_item(
             TableName=self.table_name,
             Item=items
         )
-        # logger.info(response)
-        return response
+        logger.info(response)
+
+        return
 
     def __getitem__(self, key):
-        partition_key_value, sort_key_value = key
-        response = self.client.get_item(
-            TableName=self.table_name,
-            Key={
+        """ Retreive the record from DynamoDB based on the passed key
+
+        Parameters::
+        key (tuple/string): can be a tuple if a composite key is used as primary key
+            otherwise a string containing the partition key
+
+        Return:
+        dict: Returns record from DynamoDB
+
+        """
+        try:
+            partition_key_value, sort_key_value = key
+            keys = {
                 self.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.partition_key[1]]: partition_key_value },
                 self.sort_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.sort_key[1]]: sort_key_value }
             }
+        except ValueError:
+            partition_key_value, sort_key_value = (key, None,)
+            keys = {
+                self.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.partition_key[1]]: partition_key_value }
+            }
+
+        response = self.client.get_item(
+            TableName=self.table_name,
+            Key=keys
         )
         logger.info(response['Item'])
-        response = { k: DYNAMODB_DATATYPES_REVERSE_LOOKUP(list(v)[0], list(v.values())[0])(list(v.values())[0]) for k, v in response['Item'].items() }
+        response = self.__unfluff(response)
         logger.info(response)
         return response
 
+    def __unfluff(self, fluff):
+        """ Removes the
+
+        Paramters:
+        fluff (dict): dictionary value of record returned from DynamoDB
+
+        Returns:
+        dict: Returns unfluffed  response from DynamoDB
+
+        """
+        return {
+            k: DYNAMODB_DATATYPES_REVERSE_LOOKUP(
+                list(v)[0],
+                list(v.values())[0])(list(v.values())[0])
+            for k, v in fluff['Item'].items()
+        }
+
 
 class Dyno(object):
+    """ Base class for Dyno project initiates a session with DynamoDB then
+        through the call method creates a table reference
+
     """
-    Dict like object
-    """
-    session = botocore.session.get_session()
 
     def __init__(self, endpoint_url='http://localhost:8000/'):
-        self.client =self.session.create_client('dynamodb', endpoint_url=endpoint_url)   
+        session = botocore.session.get_session()
+        self.client =self.session.create_client('dynamodb', endpoint_url=endpoint_url)
 
     def __call__(self, table_name, partition_key, sort_key=None, **attributes):
+        """ After Dyno is initiated it can be called to create a table
+
+        Parameters:
+        table_name (string):
+        partition_key (string):
+        sort_key (string):
+        attributes (dict):
+
+        Returns:
+        DynoTable: 
+
+        """
         return DynoTable(self.client, table_name, partition_key, sort_key, **attributes)
 
+    # def __delitem__(self, key):
+    #     self.client.delete_table(TableName=key)
+    #     del self.__dict__[key]
 
-    # def __setitem__(self, key, item):
-    #     if key in self.keys():
-    #         logger.info('Table already exists')
-    #         self.__dict__[key] = self.client.describe_table(TableName=key)
-    #     else:
-    #         item['TableName'] = key
-    #         self.__dict__[key] = self.client.create_table(**item)
+    # def keys(self):
+    #     return self.client.list_tables()['TableNames']
 
-    def __getitem__(self, key):
-        return self.__dict__[key]
-
-    def __delitem__(self, key):
-        self.client.delete_table(TableName=key)
-        del self.__dict__[key]
-
-    def keys(self):
-        return self.client.list_tables()['TableNames']
-
-
-        # def create_record(self):
-    #     items = {
-    #         attribute_name: 
-    #         {
-    #             MAP_DATATYPES[type(attribute_value).__name__]: attribute_value
-    #         } for attribute_name, attribute_value in attributes.items()
-    #     }
-    #     logger.info(items)
-        
-    #     self.client.put_item(
-    #         TableName=key,
-    #         Item=items
-    #     )
-
-
-if __name__ == '__main__':
-    dyno = Dyno()
-    logger.info(dyno.keys())
-
-    music = dyno(table_name='music', partition_key={'artist': 'str'}, sort_key={'song': 'str'})
-    del music
-    # logger.info(music)
-    # del music
-    # logger.info(music)
