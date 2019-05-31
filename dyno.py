@@ -216,7 +216,7 @@ class Dyno(object):
 
     def __init__(self, endpoint_url='http://localhost:8000/'):
         session = botocore.session.get_session()
-        self.client =self.session.create_client('dynamodb', endpoint_url=endpoint_url)
+        self.client = session.create_client('dynamodb', endpoint_url=endpoint_url)
 
     def __call__(self, table_name, partition_key, sort_key=None, **attributes):
         """ After Dyno is initiated it can be called to create a table
