@@ -211,7 +211,6 @@ class DynoTable(object):
 class Dynosql(object):
     """ Base class for Dyno project initiates a session with DynamoDB then
         through the call method creates a table reference
-
     """
 
     def __init__(self, endpoint_url='http://localhost:8000/'):
@@ -238,5 +237,13 @@ class Dynosql(object):
     #     del self.__dict__[key]
 
     def keys(self):
+        """ Fetches a list of table names from database
+
+        Parameters:
+        None
+
+        Returns:
+        list: of tablenames in database
+        """
         return self.client.list_tables()['TableNames']
 
