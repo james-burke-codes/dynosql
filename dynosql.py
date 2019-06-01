@@ -237,6 +237,6 @@ class Dynosql(object):
     #     self.client.delete_table(TableName=key)
     #     del self.__dict__[key]
 
-    # def keys(self):
-    #     return self.client.list_tables()['TableNames']
+    def keys(self):
+        return self.client.list_tables()['TableNames']
 
