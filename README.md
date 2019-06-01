@@ -1,4 +1,4 @@
-# DynosqlDB
+# Dynosql
 
 A wrapper for Amazon Web Services (AWS) DynamoDB to make interacting with DynamoDB more pythonic
 
