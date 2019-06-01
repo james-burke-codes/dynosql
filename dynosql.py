@@ -206,6 +206,8 @@ class DynoTable(object):
             keys = {
                 self.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.partition_key[1]]: partition_key_value }
             }
+        except TypeError:
+            raise KeyError('Table was not defined with a sort key')
 
         try:
             response = self.client.get_item(
