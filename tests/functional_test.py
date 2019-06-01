@@ -43,5 +43,11 @@ class FunctionalTestCase(unittest.TestCase):
         self.tables['music']['Prince - Purple Rain'] = {'released': 1984, 'album': 'Purple Rain'}
         self.assertRaises(KeyError)
 
+    def test_update_record_argument(self):
+        self.tables['music'] = self.dyno(table_name='music', partition_key=('artist', 'str',), sort_key=('song', 'str',))
+        self.tables['music']['Prince', 'Purple Rain'] = {'released': 1983, 'album': 'Purple Rain'}
+        self.tables['music']['Prince', 'Purple Rain']['released'] = 1984
+        self.assertEqual(self.tables['music']['Prince', 'Purple Rain']['released'], 1984)
+
 if __name__ == '__main__':
     unittest.main()
