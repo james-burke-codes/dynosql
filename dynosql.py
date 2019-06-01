@@ -10,6 +10,9 @@ logging.basicConfig(format="%(asctime)s:%(name)s:%(lineno)s:%(levelname)s - %(me
 
 # https://docs.amazonaws.cn/en_us/amazondynamodb/latest/developerguide/HowItWorks.NamingRulesDataTypes.html#HowItWorks.DataTypes
 # partition key can only be (S, N, B)
+
+""" Convert python datatypes into to dynamodb datatypes
+"""
 DYNAMODB_DATATYPES_LOOKUP = {
    'str': 'S', # Scalar Types
    'int': 'N',
@@ -23,6 +26,8 @@ DYNAMODB_DATATYPES_LOOKUP = {
 }
 
 def DYNAMODB_DATATYPES_REVERSE_LOOKUP(db_type, value):
+    """ Convert dynamodb datatypes into python datatypes
+    """
     lookup = {
        'S': str, # Scalar Types
        # binary - TODO
@@ -43,6 +48,37 @@ def DYNAMODB_DATATYPES_REVERSE_LOOKUP(db_type, value):
             except ValueError as e:
                 return str
 
+class DynoRecord(object):
+    """ DynoRecord is the wrapper class around each record
+
+    """
+    def __init__(self, table, key, attributes):
+        logger.info(table)
+        self.client = table.client
+        self.table_name = table.table_name
+
+        items = {
+            attribute_name:
+            {
+                DYNAMODB_DATATYPES_LOOKUP[type(attribute_value).__name__]: str(attribute_value)
+            } for attribute_name, attribute_value in attributes.items()
+        }
+
+        try:
+            partition_key_value, sort_key_value = key
+            items[table.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[table.partition_key[1]]: str(partition_key_value) }
+            items[table.sort_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[table.sort_key[1]]: str(sort_key_value) }
+        except ValueError:
+            partition_key_value, sort_key_value = (key, None,)
+            items[table.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[table.partition_key[1]]: str(partition_key_value) }
+        
+        response = table.client.put_item(
+            TableName=table.table_name,
+            Item=items
+        )
+        logger.info(response)
+        self.record = response
+
 
 class DynoTable(object):
     """ DynoTable is a wrapper class around botocore. Each instance references a table in DynamoDB
@@ -56,21 +92,15 @@ class DynoTable(object):
          * bulk inserting or updates
 
     """
-
     def __init__(self, client, table_name, partition_key, sort_key=None, **attributes):
         self.client = client
         self.table_name = table_name
         self.partition_key = partition_key
         self.sort_key = sort_key
+        self.descrbe = None
 
         KeySchema = []
         AttributeDefinitions = []
-        #     {
-        #         'AttributeName': attribute_name, 
-        #         'AttributeType': DYNAMODB_DATATYPES_LOOKUP[type(attribute_value).__name__]
-        #     }
-        #     for attribute_name, attribute_value in attributes.items()
-        # ]
 
         KeySchema.append({ 'AttributeName': partition_key[0], 'KeyType': 'HASH' })
         AttributeDefinitions.append(
@@ -114,7 +144,6 @@ class DynoTable(object):
 
         Return:
         None
-
         """
         try:
             self.client.delete_table(TableName=self.table_name)
@@ -134,30 +163,27 @@ class DynoTable(object):
 
         Return:
         None: It is an assignment operator so cannot return a response
-
         """
-        items = {
-            attribute_name:
-            {
-                DYNAMODB_DATATYPES_LOOKUP[type(attribute_value).__name__]: str(attribute_value)
-            } for attribute_name, attribute_value in attributes.items()
-        }
+        # items = {
+        #     attribute_name:
+        #     {
+        #         DYNAMODB_DATATYPES_LOOKUP[type(attribute_value).__name__]: str(attribute_value)
+        #     } for attribute_name, attribute_value in attributes.items()
+        # }
 
-        try:
-            partition_key_value, sort_key_value = key
-            items[self.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.partition_key[1]]: str(partition_key_value) }
-            items[self.sort_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.sort_key[1]]: str(sort_key_value) }
-        except ValueError:
-            partition_key_value, sort_key_value = (key, None,)
-            items[self.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.partition_key[1]]: str(partition_key_value) }
+        # try:
+        #     partition_key_value, sort_key_value = key
+        #     items[self.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.partition_key[1]]: str(partition_key_value) }
+        #     items[self.sort_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.sort_key[1]]: str(sort_key_value) }
+        # except ValueError:
+        #     partition_key_value, sort_key_value = (key, None,)
+        #     items[self.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.partition_key[1]]: str(partition_key_value) }
         
-        response = self.client.put_item(
-            TableName=self.table_name,
-            Item=items
-        )
-        logger.info(response)
-
-        return
+        # response = self.client.put_item(
+        #     TableName=self.table_name,
+        #     Item=items
+        # )
+        return DynoRecord(self, key, attributes)
 
     def __getitem__(self, key):
         """ Retreive the record from DynamoDB based on the passed key
@@ -168,7 +194,6 @@ class DynoTable(object):
 
         Return:
         dict: Returns record from DynamoDB
-
         """
         try:
             partition_key_value, sort_key_value = key
@@ -202,7 +227,6 @@ class DynoTable(object):
 
         Returns:
         dict: Returns unfluffed  response from DynamoDB
-
         """
         return {
             k: DYNAMODB_DATATYPES_REVERSE_LOOKUP(
@@ -232,7 +256,6 @@ class Dynosql(object):
 
         Returns:
         DynoTable: 
-
         """
         return DynoTable(self.client, table_name, partition_key, sort_key, **attributes)
 
