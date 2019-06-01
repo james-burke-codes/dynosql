@@ -36,7 +36,7 @@ class FunctionalTestCase(unittest.TestCase):
     def test_insert_record_with_sort_key_but_retreive_without(self):
         self.tables['music'] = self.dyno(table_name='music', partition_key=('artist', 'str',), sort_key=('song', 'str',))
         self.tables['music']['Prince', 'Purple Rain'] = {'released': 1984, 'album': 'Purple Rain'}
-        self.assertEqual(self.tables['music']['Prince - Purple Rain']['released'], 1984)
+        self.assertRaises(KeyError)
 
 if __name__ == '__main__':
     unittest.main()

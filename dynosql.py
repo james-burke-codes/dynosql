@@ -43,6 +43,7 @@ def DYNAMODB_DATATYPES_REVERSE_LOOKUP(db_type, value):
             except ValueError as e:
                 return str
 
+
 class DynoTable(object):
     """ DynoTable is a wrapper class around botocore. Each instance references a table in DynamoDB
         and mimics the behaviour python dict for simple opperations such as:
@@ -181,13 +182,16 @@ class DynoTable(object):
                 self.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.partition_key[1]]: partition_key_value }
             }
 
-        response = self.client.get_item(
-            TableName=self.table_name,
-            Key=keys
-        )
-        logger.info(response['Item'])
-        response = self.__unfluff(response)
-        logger.info(response)
+        try:
+            response = self.client.get_item(
+                TableName=self.table_name,
+                Key=keys
+            )
+            response = self.__unfluff(response)
+        except botocore.exceptions.ClientError as e:
+            logger.error(e)
+            raise KeyError(str(e))
+
         return response
 
     def __unfluff(self, fluff):
