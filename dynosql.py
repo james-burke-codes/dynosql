@@ -208,7 +208,7 @@ class DynoTable(object):
         }
 
 
-class Dyno(object):
+class Dynosql(object):
     """ Base class for Dyno project initiates a session with DynamoDB then
         through the call method creates a table reference
 

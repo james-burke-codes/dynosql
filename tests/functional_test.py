@@ -2,12 +2,12 @@
 import unittest
 import sys
 
-import dyno
+import dynosql
 
 class FunctionalTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.dyno = dyno.Dyno()
+        self.dyno = dynosql.Dynosql()
         self.tables = {}
 
     def tearDown(self):
