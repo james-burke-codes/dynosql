@@ -12,69 +12,67 @@ class DynoRecord(object):
     """ DynoRecord is the wrapper class around each record
 
     """
-    def __init__(self, table, key, attributes):
+    def __init__(self, table, key, attributes=None):
         self.table = table
         self.key = key
 
-        items = {
-            attribute_name:
-            {
-                DYNAMODB_DATATYPES_LOOKUP[type(attribute_value).__name__]: str(attribute_value)
-            } for attribute_name, attribute_value in attributes.items()
-        }
+        if not attributes:
+            self.__getitem__(key)
+        else:
+            items = {
+                attribute_name:
+                {
+                    DYNAMODB_DATATYPES_LOOKUP[type(attribute_value).__name__]: str(attribute_value)
+                } for attribute_name, attribute_value in attributes.items()
+            }
 
-        try:
-            partition_key_value, sort_key_value = self.key
-            items[self.table.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: str(partition_key_value) }
-            items[self.table.sort_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.sort_key[1]]: str(sort_key_value) }
-        except ValueError:
-            partition_key_value, sort_key_value = (self.key, None,)
-            items[self.table.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: str(partition_key_value) }
-        
-        logger.info(partition_key_value)
-        logger.info(table.partition_key)
-        logger.info(items)
+            try:
+                partition_key_value, sort_key_value = self.key
+                items[self.table.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: str(partition_key_value) }
+                items[self.table.sort_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.sort_key[1]]: str(sort_key_value) }
+            except ValueError:
+                partition_key_value, sort_key_value = (self.key, None,)
+                items[self.table.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: str(partition_key_value) }
 
-        try:
-            response = self.table.client.put_item(
-                TableName=self.table.table_name,
-                Item=items
-            )
-        except botocore.exceptions.ClientError as e:
-            logger.error(e)
-            raise KeyError(str(e))
-        
+            try:
+                response = self.table.client.put_item(
+                    TableName=self.table.table_name,
+                    Item=items
+                )
+            except botocore.exceptions.ClientError as e:
+                logger.error(e)
+                raise KeyError(str(e))
+
 
     def __getitem__(self, key):
         """
         """
-        logger.info(key)
-        # try:
-        #     partition_key_value, sort_key_value = self.key
-        #     keys = {
-        #         self.table.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: partition_key_value },
-        #         self.table.sort_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.sort_key[1]]: sort_key_value }
-        #     }
-        # except ValueError:
-        #     partition_key_value, sort_key_value = (self.key, None,)
-        #     keys = {
-        #         self.table.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: partition_key_value }
-        #     }
-        # except TypeError:
-        #     raise KeyError('Table was not defined with a sort key')
+        try:
+            partition_key_value, sort_key_value = self.key
+            keys = {
+                self.table.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: partition_key_value },
+                self.table.sort_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.sort_key[1]]: sort_key_value }
+            }
+        except ValueError:
+            partition_key_value, sort_key_value = (self.key, None,)
+            keys = {
+                self.table.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: partition_key_value }
+            }
+        except TypeError:
+            raise KeyError('Table was not defined with a sort key')
 
-        # try:
-        #     response = self.table.client.get_item(
-        #         TableName=self.table.table_name,
-        #         Key=keys
-        #     )
-        #     response = UNFLUFF(response)
-        # except botocore.exceptions.ClientError as e:
-        #     logger.error(e)
-        #     raise KeyError(str(e))
+        try:
+            response = self.table.client.get_item(
+                TableName=self.table.table_name,
+                Key=keys
+            )
+            response = UNFLUFF(response)
+        except botocore.exceptions.ClientError as e:
+            logger.error(e)
+            raise KeyError(str(e))
 
-        # logger.info(response)
-        # return response
+        logger.info(response)
+        return response
 
 
     def __setitem__(self, key, attributes):
