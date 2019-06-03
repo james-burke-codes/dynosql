@@ -12,7 +12,9 @@ class FunctionalTestCase(unittest.TestCase):
 
     def tearDown(self):
         for k in list(self.tables):
-            del self.tables[k]
+            print('deleting:', k)
+            self.tables[k].drop()
+        print('show tables:', self.tables)
 
     def test_create_table(self):
         self.tables['music'] = self.dyno(table_name='music', partition_key=('artist', 'str',), sort_key=('song', 'str',))
@@ -29,7 +31,7 @@ class FunctionalTestCase(unittest.TestCase):
         self.assertEqual(self.tables['music']['Prince', 'Purple Rain']['released'], 1984)
 
     def test_insert_record_without_sort_key(self):
-        self.tables['music'] = self.dyno(table_name='music', partition_key=('artist', 'str',))
+        self.tables['music'] = self.dyno(table_name='music', partition_key=('song', 'str',))
         self.tables['music']['Prince - Purple Rain'] = {'released': 1984, 'album': 'Purple Rain'}
         self.assertEqual(self.tables['music']['Prince - Purple Rain']['released'], 1984)
 
@@ -39,15 +41,9 @@ class FunctionalTestCase(unittest.TestCase):
         self.assertRaises(KeyError)
 
     def test_insert_record_without_sort_key_but_retreive_with(self):
-        self.tables['music'] = self.dyno(table_name='music', partition_key=('artist', 'str',))
+        self.tables['music'] = self.dyno(table_name='music', partition_key=('song', 'str',))
         self.tables['music']['Prince - Purple Rain'] = {'released': 1984, 'album': 'Purple Rain'}
         self.assertRaises(KeyError)
-
-    def test_update_record_argument(self):
-        self.tables['music'] = self.dyno(table_name='music', partition_key=('artist', 'str',), sort_key=('song', 'str',))
-        self.tables['music']['Prince', 'Purple Rain'] = {'released': 1983, 'album': 'Purple Rain'}
-        self.tables['music']['Prince', 'Purple Rain']['released'] = 1984
-        self.assertEqual(self.tables['music']['Prince', 'Purple Rain']['released'], 1984)
 
 if __name__ == '__main__':
     unittest.main()
