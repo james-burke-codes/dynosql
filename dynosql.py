@@ -25,7 +25,17 @@ DYNAMODB_DATATYPES_LOOKUP = {
    # string set, number set, and binary set.
 }
 
-def DYNAMODB_DATATYPES_REVERSE_LOOKUP(db_type, value):
+DYNAMODB_DATATYPES_LOOKUP2 = {
+   'S': 'str', # Scalar Types
+   # binary - TODO
+   'M': 'dict', # Document Types
+   'L': 'list',
+   'N': 'int',
+   # Set Types - TODO
+   # string set, number set, and binary set.
+}
+
+def DYNAMODB_DATATYPES_REVERSE_LOOKUP(db_type, value=None):
     """ Convert dynamodb datatypes into python datatypes
     """
     lookup = {
@@ -48,14 +58,31 @@ def DYNAMODB_DATATYPES_REVERSE_LOOKUP(db_type, value):
             except ValueError as e:
                 return str
 
+
+def UNFLUFF(fluff):
+    """ Removes the
+
+    Paramters:
+    fluff (dict): dictionary value of record returned from DynamoDB
+
+    Returns:
+    dict: Returns unfluffed  response from DynamoDB
+    """
+    return {
+        k: DYNAMODB_DATATYPES_REVERSE_LOOKUP(
+            list(v)[0],
+            list(v.values())[0])(list(v.values())[0])
+        for k, v in fluff['Item'].items()
+    }
+
+
 class DynoRecord(object):
     """ DynoRecord is the wrapper class around each record
 
     """
     def __init__(self, table, key, attributes):
-        logger.info(table)
-        self.client = table.client
-        self.table_name = table.table_name
+        self.table = table
+        self.key = key
 
         items = {
             attribute_name:
@@ -65,19 +92,63 @@ class DynoRecord(object):
         }
 
         try:
-            partition_key_value, sort_key_value = key
-            items[table.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[table.partition_key[1]]: str(partition_key_value) }
-            items[table.sort_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[table.sort_key[1]]: str(sort_key_value) }
+            partition_key_value, sort_key_value = self.key
+            items[self.table.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: str(partition_key_value) }
+            items[self.table.sort_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.sort_key[1]]: str(sort_key_value) }
         except ValueError:
-            partition_key_value, sort_key_value = (key, None,)
-            items[table.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[table.partition_key[1]]: str(partition_key_value) }
+            partition_key_value, sort_key_value = (self.key, None,)
+            items[self.table.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: str(partition_key_value) }
         
-        response = table.client.put_item(
-            TableName=table.table_name,
-            Item=items
-        )
+        logger.info(partition_key_value)
+        logger.info(table.partition_key)
+        logger.info(items)
+
+        try:
+            response = self.table.client.put_item(
+                TableName=self.table.table_name,
+                Item=items
+            )
+            self.record = response
+        except botocore.exceptions.ClientError as e:
+            logger.error(e)
+            raise KeyError(str(e))
+        
+
+    def __getitem__(self, key):
+        """
+        """
+        logger.info(key)
+        try:
+            partition_key_value, sort_key_value = self.key
+            keys = {
+                self.table.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: partition_key_value },
+                self.table.sort_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.sort_key[1]]: sort_key_value }
+            }
+        except ValueError:
+            partition_key_value, sort_key_value = (self.key, None,)
+            keys = {
+                self.table.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: partition_key_value }
+            }
+        except TypeError:
+            raise KeyError('Table was not defined with a sort key')
+
+        try:
+            response = self.table.client.get_item(
+                TableName=self.table.table_name,
+                Key=keys
+            )
+            response = UNFLUFF(response)
+        except botocore.exceptions.ClientError as e:
+            logger.error(e)
+            raise KeyError(str(e))
+
         logger.info(response)
-        self.record = response
+        return response
+
+
+    def __setitem__(self, key, attributes):
+        logger.info(key)
+        logger.info(attributes)
 
 
 class DynoTable(object):
@@ -92,23 +163,25 @@ class DynoTable(object):
          * bulk inserting or updates
 
     """
-    def __init__(self, client, table_name, partition_key, sort_key=None, **attributes):
+    def __init__(self, client, table_name, partition_key=None, sort_key=None, **attributes):
         self.client = client
         self.table_name = table_name
         self.partition_key = partition_key
         self.sort_key = sort_key
         self.descrbe = None
+        self.record = {}
 
         KeySchema = []
         AttributeDefinitions = []
 
-        KeySchema.append({ 'AttributeName': partition_key[0], 'KeyType': 'HASH' })
-        AttributeDefinitions.append(
-            {
-                'AttributeName': partition_key[0],
-                'AttributeType': DYNAMODB_DATATYPES_LOOKUP[partition_key[1]]
-            }
-        )
+        if partition_key:
+            KeySchema.append({ 'AttributeName': partition_key[0], 'KeyType': 'HASH' })
+            AttributeDefinitions.append(
+                {
+                    'AttributeName': partition_key[0],
+                    'AttributeType': DYNAMODB_DATATYPES_LOOKUP[partition_key[1]]
+                }
+            )
         if sort_key:
             KeySchema.append({ 'AttributeName': sort_key[0], 'KeyType': 'RANGE' })
             AttributeDefinitions.append(
@@ -117,6 +190,8 @@ class DynoTable(object):
                     'AttributeType': DYNAMODB_DATATYPES_LOOKUP[sort_key[1]]
                 }
             )
+        logger.debug(KeySchema)
+        logger.debug(AttributeDefinitions)
 
         try:
             description = self.client.create_table(
@@ -132,9 +207,35 @@ class DynoTable(object):
             del description['TableDescription']
             self.describe = description
         except Exception as e:
-            logger.info(e)
             description = self.client.describe_table(TableName=table_name)
+            logger.debug(description['Table'])
+            self.partition_key = (
+                description['Table']['AttributeDefinitions'][0]['AttributeName'],
+                DYNAMODB_DATATYPES_LOOKUP2[description['Table']['AttributeDefinitions'][0]['AttributeType']]
+            )
+            try:
+                self.sort_key = (
+                    description['Table']['AttributeDefinitions'][1]['AttributeName'],
+                    DYNAMODB_DATATYPES_LOOKUP2[description['Table']['AttributeDefinitions'][1]['AttributeType']]
+                )
+            except IndexError:
+                pass
             self.describe = description
+        logger.debug(self.partition_key)
+        logger.debug(self.sort_key)
+
+    def drop(self):
+        """ __del__ isn't very reliable in testing
+            backup method for making sure tables are deleted
+
+        Parameters:
+        None
+
+        Return:
+        None
+        """
+        self.client.delete_table(TableName=self.table_name)
+        logger.debug('deleted %s' % self.table_name)
 
     def __del__(self):
         """ Deletes the referenced table from DynamoDB
@@ -147,10 +248,13 @@ class DynoTable(object):
         """
         try:
             self.client.delete_table(TableName=self.table_name)
-            logger.info('deleted %s' % self.table_name)
+            logger.debug('deleted %s' % self.table_name)
         except ReferenceError:
             # This method is always called when the class is destroyed
             # if it is not called explicitly it will raise a ReferenceError
+            pass
+        except self.client.exceptions.ResourceNotFoundException:
+            # table doesn't exist
             pass
 
     def __setitem__(self, key, attributes):
@@ -183,7 +287,9 @@ class DynoTable(object):
         #     TableName=self.table_name,
         #     Item=items
         # )
-        return DynoRecord(self, key, attributes)
+        #logger.info(key)
+        self.record[key] = DynoRecord(self, key, attributes)
+        return self.record[key] # DynoRecord(self, key, attributes)
 
     def __getitem__(self, key):
         """ Retreive the record from DynamoDB based on the passed key
@@ -195,6 +301,8 @@ class DynoTable(object):
         Return:
         dict: Returns record from DynamoDB
         """
+        logger.info(self.partition_key)
+        logger.info(DYNAMODB_DATATYPES_LOOKUP[self.partition_key[1]])
         try:
             partition_key_value, sort_key_value = key
             keys = {
@@ -214,28 +322,17 @@ class DynoTable(object):
                 TableName=self.table_name,
                 Key=keys
             )
-            response = self.__unfluff(response)
+            response = UNFLUFF(response)
         except botocore.exceptions.ClientError as e:
             logger.error(e)
             raise KeyError(str(e))
 
+        logger.info(response)
+        logger.info(key)
+
+        self.record[key].last_query = response
+
         return response
-
-    def __unfluff(self, fluff):
-        """ Removes the
-
-        Paramters:
-        fluff (dict): dictionary value of record returned from DynamoDB
-
-        Returns:
-        dict: Returns unfluffed  response from DynamoDB
-        """
-        return {
-            k: DYNAMODB_DATATYPES_REVERSE_LOOKUP(
-                list(v)[0],
-                list(v.values())[0])(list(v.values())[0])
-            for k, v in fluff['Item'].items()
-        }
 
 
 class Dynosql(object):
@@ -247,7 +344,7 @@ class Dynosql(object):
         session = botocore.session.get_session()
         self.client = session.create_client('dynamodb', endpoint_url=endpoint_url)
 
-    def __call__(self, table_name, partition_key, sort_key=None, **attributes):
+    def __call__(self, table_name, partition_key=None, sort_key=None, **attributes):
         """ After Dyno is initiated it can be called to create a table
 
         Parameters:
@@ -275,4 +372,5 @@ class Dynosql(object):
         list: of tablenames in database
         """
         return self.client.list_tables()['TableNames']
+
 
