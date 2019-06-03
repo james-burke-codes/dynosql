@@ -15,10 +15,37 @@ class DynoRecord(object):
     def __init__(self, table, key, attributes=None):
         self.table = table
         self.key = key
+        self.__json = { }
 
         if not attributes:
-            self.__getitem__(key)
+            # Fetching data
+            try:
+                partition_key_value, sort_key_value = self.key
+                keys = {
+                    self.table.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: partition_key_value },
+                    self.table.sort_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.sort_key[1]]: sort_key_value }
+                }
+            except ValueError:
+                partition_key_value, sort_key_value = (self.key, None,)
+                keys = {
+                    self.table.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: partition_key_value }
+                }
+            except TypeError:
+                raise KeyError('Table was not defined with a sort key')
+
+            try:
+                response = self.table.client.get_item(
+                    TableName=self.table.table_name,
+                    Key=keys
+                )
+                self.__json = UNFLUFF(response)
+            except botocore.exceptions.ClientError as e:
+                # self.table.client.exceptions.ResourceNotFoundException
+                logger.error(e)
+                logger.info(self.table.table_name)
+                raise KeyError(str(e))
         else:
+            # Inserting data
             items = {
                 attribute_name:
                 {
@@ -35,7 +62,7 @@ class DynoRecord(object):
                 items[self.table.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: str(partition_key_value) }
 
             try:
-                response = self.table.client.put_item(
+                self.describe = self.table.client.put_item(
                     TableName=self.table.table_name,
                     Item=items
                 )
@@ -48,33 +75,15 @@ class DynoRecord(object):
         """
         """
         try:
-            partition_key_value, sort_key_value = self.key
-            keys = {
-                self.table.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: partition_key_value },
-                self.table.sort_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.sort_key[1]]: sort_key_value }
-            }
-        except ValueError:
-            partition_key_value, sort_key_value = (self.key, None,)
-            keys = {
-                self.table.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: partition_key_value }
-            }
-        except TypeError:
-            raise KeyError('Table was not defined with a sort key')
-
-        try:
-            response = self.table.client.get_item(
-                TableName=self.table.table_name,
-                Key=keys
-            )
-            response = UNFLUFF(response)
-        except botocore.exceptions.ClientError as e:
-            logger.error(e)
-            raise KeyError(str(e))
-
-        logger.info(response)
-        return response
+            logger.info('getitem: %s' % str(key))
+            return self.__json[key]
+        except KeyError:
+            return self.__json
 
 
     def __setitem__(self, key, attributes):
-        logger.info(key)
-        logger.info(attributes)
+        logger.info('setitem: %s - %s - %s' % (self.__json, str(key), attributes))
+
+    @property
+    def json(self):
+        return self.__json
