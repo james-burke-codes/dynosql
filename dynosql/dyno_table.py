@@ -26,8 +26,7 @@ class DynoTable(object):
         self.table_name = table_name
         self.partition_key = partition_key
         self.sort_key = sort_key
-        self.descrbe = None
-        self.record = {}
+        self.__info = None
 
         KeySchema = []
         AttributeDefinitions = []
@@ -48,8 +47,8 @@ class DynoTable(object):
                     'AttributeType': DYNAMODB_DATATYPES_LOOKUP[sort_key[1]]
                 }
             )
-        logger.debug(KeySchema)
-        logger.debug(AttributeDefinitions)
+        logger.info(KeySchema)
+        logger.info(AttributeDefinitions)
 
         try:
             description = self.client.create_table(
@@ -63,10 +62,11 @@ class DynoTable(object):
             )
             description['Table'] = description['TableDescription']
             del description['TableDescription']
-            self.describe = description
-        except Exception as e:
+            self.__info = description
+        except botocore.exceptions.ParamValidationError as e:
+            logger.error(e)
             description = self.client.describe_table(TableName=table_name)
-            logger.debug(description['Table'])
+            #logger.info(description['Table'])
             self.partition_key = (
                 description['Table']['AttributeDefinitions'][0]['AttributeName'],
                 DYNAMODB_DATATYPES_LOOKUP2[description['Table']['AttributeDefinitions'][0]['AttributeType']]
@@ -78,27 +78,40 @@ class DynoTable(object):
                 )
             except IndexError:
                 pass
-            self.describe = description
+            self.__info = description
 
-    def drop(self):
-        """ __del__ isn't very reliable in testing
-            backup method for making sure tables are deleted
+
+    def __setitem__(self, key, attributes):
+        """ Inserts a new record or updates an existing one
 
         Parameters:
-        None
+        key (tuple/string): can be a tuple if a composite key is used as primary key
+            otherwise a string containing the partition key
+        atttributes (dict): additional attributes
 
         Return:
-        None
+        None: It is an assignment operator so cannot return a response
         """
-        try:
-            self.client.delete_table(TableName=self.table_name)
-            logger.debug('deleted %s' % self.table_name)
-        except self.client.exceptions.ResourceNotFoundException:
-            # table doesn't exist
-            pass
+        logger.info('setitem: %s - %s' % (key, attributes))
+        DynoRecord(self, key, attributes)
+
+
+    def __getitem__(self, key):
+        """ Retreive the record from DynamoDB based on the passed key
+
+        Parameters::
+        key (tuple/string): can be a tuple if a composite key is used as primary key
+            otherwise a string containing the partition key
+
+        Return:
+        dict: Returns record from DynamoDB
+        """
+        logger.info('getitem: %s' % str(key))
+        return DynoRecord(self, key)
+
 
     def __del__(self):
-        """ Deletes the referenced table from DynamoDB
+        """ Deletes the referenced table from database
 
         Parameters:
         None
@@ -117,60 +130,25 @@ class DynoTable(object):
             # table doesn't exist
             pass
 
-    def __setitem__(self, key, attributes):
-        """ Inserts a new record or updates an existing one
+
+    @property
+    def info(self):
+        return self.__info
+    
+
+    def drop(self):
+        """ __del__ isn't very reliable in testing
+            backup method for making sure tables are deleted
 
         Parameters:
-        key (tuple/string): can be a tuple if a composite key is used as primary key
-            otherwise a string containing the partition key
-        atttributes (dict): additional attributes
+        None
 
         Return:
-        None: It is an assignment operator so cannot return a response
-        """
-        self.record[key] = DynoRecord(self, key, attributes)
-        # return self.record[key] # DynoRecord(self, key, attributes)
-
-    def __getitem__(self, key):
-        """ Retreive the record from DynamoDB based on the passed key
-
-        Parameters::
-        key (tuple/string): can be a tuple if a composite key is used as primary key
-            otherwise a string containing the partition key
-
-        Return:
-        dict: Returns record from DynamoDB
+        None
         """
         try:
-            return self.record[key][key]
-        except KeyError:
-            self.record[key] = DynoRecord(self, key)
-            return self.record[key][key]
-
-        # try:
-        #     partition_key_value, sort_key_value = key
-        #     keys = {
-        #         self.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.partition_key[1]]: partition_key_value },
-        #         self.sort_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.sort_key[1]]: sort_key_value }
-        #     }
-        # except ValueError:
-        #     partition_key_value, sort_key_value = (key, None,)
-        #     keys = {
-        #         self.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.partition_key[1]]: partition_key_value }
-        #     }
-        # except TypeError:
-        #     raise KeyError('Table was not defined with a sort key')
-
-        # try:
-        #     response = self.client.get_item(
-        #         TableName=self.table_name,
-        #         Key=keys
-        #     )
-        #     response = UNFLUFF(response)
-        # except botocore.exceptions.ClientError as e:
-        #     logger.error(e)
-        #     raise KeyError(str(e))
-
-        # self.record[key] = response
-
-        # return response
+            self.client.delete_table(TableName=self.table_name)
+            logger.debug('deleted %s' % self.table_name)
+        except self.client.exceptions.ResourceNotFoundException:
+            # table doesn't exist
+            pass
