@@ -1,3 +1,4 @@
+import botocore
 import logging
 
 logger = logging.getLogger(__name__)
@@ -89,8 +90,12 @@ class DynoTable(object):
         Return:
         None
         """
-        self.client.delete_table(TableName=self.table_name)
-        logger.debug('deleted %s' % self.table_name)
+        try:
+            self.client.delete_table(TableName=self.table_name)
+            logger.debug('deleted %s' % self.table_name)
+        except self.client.exceptions.ResourceNotFoundException:
+            # table doesn't exist
+            pass
 
     def __del__(self):
         """ Deletes the referenced table from DynamoDB
@@ -123,28 +128,8 @@ class DynoTable(object):
         Return:
         None: It is an assignment operator so cannot return a response
         """
-        # items = {
-        #     attribute_name:
-        #     {
-        #         DYNAMODB_DATATYPES_LOOKUP[type(attribute_value).__name__]: str(attribute_value)
-        #     } for attribute_name, attribute_value in attributes.items()
-        # }
-
-        # try:
-        #     partition_key_value, sort_key_value = key
-        #     items[self.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.partition_key[1]]: str(partition_key_value) }
-        #     items[self.sort_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.sort_key[1]]: str(sort_key_value) }
-        # except ValueError:
-        #     partition_key_value, sort_key_value = (key, None,)
-        #     items[self.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.partition_key[1]]: str(partition_key_value) }
-        
-        # response = self.client.put_item(
-        #     TableName=self.table_name,
-        #     Item=items
-        # )
-        #logger.info(key)
         self.record[key] = DynoRecord(self, key, attributes)
-        return self.record[key] # DynoRecord(self, key, attributes)
+        # return self.record[key] # DynoRecord(self, key, attributes)
 
     def __getitem__(self, key):
         """ Retreive the record from DynamoDB based on the passed key
@@ -185,6 +170,6 @@ class DynoTable(object):
         logger.info(self.record)
         logger.info(key)
 
-        self.record[key].last_query = response
+        self.record[key] = response
 
         return response
