@@ -1,3 +1,4 @@
+import botocore
 import logging
 
 logger = logging.getLogger(__name__)
@@ -39,7 +40,6 @@ class DynoRecord(object):
                 TableName=self.table.table_name,
                 Item=items
             )
-            self.record = response
         except botocore.exceptions.ClientError as e:
             logger.error(e)
             raise KeyError(str(e))
@@ -49,32 +49,32 @@ class DynoRecord(object):
         """
         """
         logger.info(key)
-        try:
-            partition_key_value, sort_key_value = self.key
-            keys = {
-                self.table.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: partition_key_value },
-                self.table.sort_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.sort_key[1]]: sort_key_value }
-            }
-        except ValueError:
-            partition_key_value, sort_key_value = (self.key, None,)
-            keys = {
-                self.table.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: partition_key_value }
-            }
-        except TypeError:
-            raise KeyError('Table was not defined with a sort key')
+        # try:
+        #     partition_key_value, sort_key_value = self.key
+        #     keys = {
+        #         self.table.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: partition_key_value },
+        #         self.table.sort_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.sort_key[1]]: sort_key_value }
+        #     }
+        # except ValueError:
+        #     partition_key_value, sort_key_value = (self.key, None,)
+        #     keys = {
+        #         self.table.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: partition_key_value }
+        #     }
+        # except TypeError:
+        #     raise KeyError('Table was not defined with a sort key')
 
-        try:
-            response = self.table.client.get_item(
-                TableName=self.table.table_name,
-                Key=keys
-            )
-            response = UNFLUFF(response)
-        except botocore.exceptions.ClientError as e:
-            logger.error(e)
-            raise KeyError(str(e))
+        # try:
+        #     response = self.table.client.get_item(
+        #         TableName=self.table.table_name,
+        #         Key=keys
+        #     )
+        #     response = UNFLUFF(response)
+        # except botocore.exceptions.ClientError as e:
+        #     logger.error(e)
+        #     raise KeyError(str(e))
 
-        logger.info(response)
-        return response
+        # logger.info(response)
+        # return response
 
 
     def __setitem__(self, key, attributes):
