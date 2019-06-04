@@ -64,7 +64,6 @@ class DynoTable(object):
             del description['TableDescription']
             self.__info = description
         except botocore.exceptions.ParamValidationError as e:
-            logger.error(e)
             description = self.client.describe_table(TableName=table_name)
             #logger.info(description['Table'])
             self.partition_key = (
