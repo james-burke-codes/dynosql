@@ -27,17 +27,20 @@ music_ex3 = dyno(table_name='music')
 music_ex3['White Stripes - Friends'].json
 
 
+# update record attribute
+music['White Stripes', 'Friends']['released'] = 2001
+
+
 # delete table
 del music_ex3
+# or
+music_ex.drop()
 ```
 _Note: `music['White Stripes - Friends']` itself will return a DynoRecord object so you must use `.json` to get the record_
 
 ## Planned functions
 
 ```python
-# update record
-music['White Stripes', 'Friends']['released'] = 2001
-
 # delete record
 del music['White Stripes', 'Friends']
 
