@@ -17,74 +17,76 @@ class DynoRecord(object):
         self.key = key
         self.__json = { }
 
-        # Inserting record
-        logger.info('inserting: {%s : %s}' % (str(key), attributes))
-        items = {
-            attribute_name:
-            {
-                DYNAMODB_DATATYPES_LOOKUP[type(attribute_value).__name__]: str(attribute_value)
-            } for attribute_name, attribute_value in attributes.items()
-        }
-
-        try:
-            partition_key_value, sort_key_value = self.key
-            items[self.table.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: str(partition_key_value) }
-            items[self.table.sort_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.sort_key[1]]: str(sort_key_value) }
-        except ValueError:
-            partition_key_value, sort_key_value = (self.key, None,)
-            items[self.table.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: str(partition_key_value) }
-
-        try:
-            self.describe = self.table.client.put_item(
-                TableName=self.table.table_name,
-                Item=items
-            )
-        except botocore.exceptions.ClientError as e:
-            logger.error(e)
-            raise KeyError(str(e))
-
-
-    def __new__(cls, table, key, attributes=None):
-        if attributes:
-            return super(DynoRecord, cls).__new__(cls)
-        else:
-            # Fetching record
+        if not attributes:
+            # Fetching data
             logger.info('fetching: %s' % str(key))
             try:
-                partition_key_value, sort_key_value = key
+                partition_key_value, sort_key_value = self.key
                 keys = {
-                    table.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[table.partition_key[1]]: partition_key_value },
-                    table.sort_key[0]: { DYNAMODB_DATATYPES_LOOKUP[table.sort_key[1]]: sort_key_value }
+                    self.table.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: partition_key_value },
+                    self.table.sort_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.sort_key[1]]: sort_key_value }
                 }
             except ValueError:
-                partition_key_value, sort_key_value = (key, None,)
+                partition_key_value, sort_key_value = (self.key, None,)
                 keys = {
-                    table.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[table.partition_key[1]]: partition_key_value }
+                    self.table.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: partition_key_value }
                 }
             except TypeError:
                 raise KeyError('Table was not defined with a sort key')
 
             try:
-                response = table.client.get_item(
-                    TableName=table.table_name,
+                response = self.table.client.get_item(
+                    TableName=self.table.table_name,
                     Key=keys
                 )
-                return UNFLUFF(response)
-            except table.client.exceptions.ResourceNotFoundException as e:
+                self.__json = UNFLUFF(response)
+            except self.table.client.exceptions.ResourceNotFoundException as e:
                 # botocore.exceptions.ClientError
                 logger.error(e)
-                logger.info(table.table_name)
+                logger.info(self.table.table_name)
+                raise KeyError(str(e))
+        else:
+            # Inserting data
+            logger.info('inserting: {%s : %s}' % (str(key), attributes))
+            items = {
+                attribute_name:
+                {
+                    DYNAMODB_DATATYPES_LOOKUP[type(attribute_value).__name__]: str(attribute_value)
+                } for attribute_name, attribute_value in attributes.items()
+            }
+
+            try:
+                partition_key_value, sort_key_value = self.key
+                items[self.table.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: str(partition_key_value) }
+                items[self.table.sort_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.sort_key[1]]: str(sort_key_value) }
+            except ValueError:
+                partition_key_value, sort_key_value = (self.key, None,)
+                items[self.table.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: str(partition_key_value) }
+
+            try:
+                self.describe = self.table.client.put_item(
+                    TableName=self.table.table_name,
+                    Item=items
+                )
+            except botocore.exceptions.ClientError as e:
+                logger.error(e)
                 raise KeyError(str(e))
 
+    # def __new__(cls, table, key, attributes=None):
+    #     if attributes:
+    #         return super(DynoRecord, cls).__new__(cls)
+    #     else:
+    #          pass
 
-    # def __getitem__(self, key):
-    #     """
-    #     """
-    #     try:
-    #         logger.info('getitem: %s' % str(key))
-    #         return self.__json[key]
-    #     except KeyError:
-    #         return self.__json
+
+    def __getitem__(self, key):
+        """
+        """
+        try:
+            logger.info('getitem: %s' % str(key))
+            return self.__json[key]
+        except KeyError:
+            return self.__json
 
 
     def __setitem__(self, key, attributes):
