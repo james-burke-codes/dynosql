@@ -10,21 +10,27 @@ import dynosql
 
 dyno = dynosql.Dynosql()
 
-# create table
-music = dyno(table_name='music', partition_key={'artist': 'str'}, sort_key={'song': 'str'})
+# create table with composite key
+music_ex1 = dyno(table_name='music', partition_key={'artist': 'str'}, sort_key={'song': 'str'})
+music_ex1['White Stripes', 'Friends'] = {released=2002, album='White Blood Cells'}
+music_ex1['White Stripes', 'Friends'].json
 
-# insert record
-music['White Stripes', 'Friends'] = {released=2002, album='White Blood Cells'}
 
-# select by composite key
-music['White Stripes', 'Friends']
+# define table with only a partition key
+music_ex2 = dyno(table_name='music', partition_key={'song': 'str'})
+music_ex2['White Stripes - Friends'] = {released=2002, album='White Blood Cells'}
+music_ex2['White Stripes - Friends'].json
 
-# select by partition key
-music['White Stripes - Friends']
+
+# reference existing table
+music_ex3 = dyno(table_name='music')
+music_ex3['White Stripes - Friends'].json
+
 
 # delete table
-del music
+del music_ex3
 ```
+_Note: `music['White Stripes - Friends']` itself will return a DynoRecord object so you must use `.json` to get the record_
 
 ## Planned functions
 
