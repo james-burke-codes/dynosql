@@ -35,15 +35,16 @@ music['White Stripes', 'Friends']['released'] = 2001
 del music_ex3
 # or
 music_ex.drop()
+
+
+# delete record
+del music['White Stripes', 'Friends']
 ```
 _Note: `music['White Stripes - Friends']` itself will return a DynoRecord object so you must use `.json` to get the record_
 
 ## Planned functions
 
 ```python
-# delete record
-del music['White Stripes', 'Friends']
-
 # select by condition on non-primary key attributes
 music.filter(lambda released: released == 2002)
 ```
