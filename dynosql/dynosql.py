@@ -32,6 +32,7 @@ class Dynosql(object):
         Returns:
         DynoTable: 
         """
+        logger.info('creating table: %s' % table_name)
         return DynoTable(self.client, table_name, partition_key, sort_key, **attributes)
 
     # def __delitem__(self, key):
