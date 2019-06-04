@@ -2,7 +2,13 @@
 import unittest
 import sys
 
-import dynosql
+import logging
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(format="%(asctime)s:%(name)s:%(lineno)s:%(levelname)s - %(message)s",
+                    level="INFO")
+
+from dynosql import dynosql
 
 class FunctionalTestCase(unittest.TestCase):
 
@@ -18,7 +24,7 @@ class FunctionalTestCase(unittest.TestCase):
 
     def test_create_table(self):
         self.tables['music'] = self.dyno(table_name='music', partition_key=('artist', 'str',), sort_key=('song', 'str',))
-        self.assertEqual(self.tables['music'].describe['Table']['TableName'], 'music')
+        self.assertEqual(self.tables['music'].info['Table']['TableName'], 'music')
 
     def test_delete_table(self):
         self.tables['music'] = self.dyno(table_name='music', partition_key=('artist', 'str',), sort_key=('song', 'str',))
@@ -44,6 +50,24 @@ class FunctionalTestCase(unittest.TestCase):
         self.tables['music'] = self.dyno(table_name='music', partition_key=('song', 'str',))
         self.tables['music']['Prince - Purple Rain'] = {'released': 1984, 'album': 'Purple Rain'}
         self.assertRaises(KeyError)
+
+    def test_reference_existing_table(self):
+        self.tables['music'] = self.dyno(table_name='music', partition_key=('song', 'str',))
+        self.tables['music']['Prince - Purple Rain'] = {'released': 1984, 'album': 'Purple Rain'}
+
+        self.tables['music2'] = self.dyno(table_name='music')
+        self.assertEqual(self.tables['music2']['Prince - Purple Rain']['released'], 1984)
+
+    # def test_update_record_argument(self):
+    #     self.tables['music'] = self.dyno(table_name='music', partition_key=('artist', 'str',), sort_key=('song', 'str',))
+    #     logger.info('create record')
+    #     self.tables['music']['Prince', 'Purple Rain'] = {'released': 1983, 'album': 'Purple Rain'}
+    #     logger.info('update record')
+    #     self.tables['music']['Prince', 'Purple Rain']['released'] = 1984
+    #     logger.info('update ended')
+    #     logger.info(self.tables['music']['Prince', 'Purple Rain'])
+    #     assert False
+    #     self.assertEqual(self.tables['music']['Prince', 'Purple Rain']['released'], 1984)
 
 if __name__ == '__main__':
     unittest.main()
