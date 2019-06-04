@@ -19,21 +19,9 @@ class DynoRecord(object):
 
         if not attributes:
             # Fetching data
-            logger.info('fetching: %s' % str(key))
-            try:
-                partition_key_value, sort_key_value = self.key
-                keys = {
-                    self.table.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: partition_key_value },
-                    self.table.sort_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.sort_key[1]]: sort_key_value }
-                }
-            except ValueError:
-                partition_key_value, sort_key_value = (self.key, None,)
-                keys = {
-                    self.table.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: partition_key_value }
-                }
-            except TypeError:
-                raise KeyError('Table was not defined with a sort key')
+            logger.info('fetching: %s' % str(self.key))
 
+            keys = self._get_keys()
             try:
                 response = self.table.client.get_item(
                     TableName=self.table.table_name,
@@ -47,7 +35,7 @@ class DynoRecord(object):
                 raise KeyError(str(e))
         else:
             # Inserting data
-            logger.info('inserting: {%s : %s}' % (str(key), attributes))
+            logger.info('inserting: {%s : %s}' % (str(self.key), attributes))
             items = {
                 attribute_name:
                 {
@@ -55,13 +43,15 @@ class DynoRecord(object):
                 } for attribute_name, attribute_value in attributes.items()
             }
 
-            try:
-                partition_key_value, sort_key_value = self.key
-                items[self.table.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: str(partition_key_value) }
-                items[self.table.sort_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.sort_key[1]]: str(sort_key_value) }
-            except ValueError:
-                partition_key_value, sort_key_value = (self.key, None,)
-                items[self.table.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: str(partition_key_value) }
+            items = {**items, **self._get_keys()}
+
+            # try:
+            #     partition_key_value, sort_key_value = self.key
+            #     items[self.table.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: str(partition_key_value) }
+            #     items[self.table.sort_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.sort_key[1]]: str(sort_key_value) }
+            # except ValueError:
+            #     partition_key_value, sort_key_value = (self.key, None,)
+            #     items[self.table.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: str(partition_key_value) }
 
             try:
                 self.describe = self.table.client.put_item(
@@ -90,8 +80,34 @@ class DynoRecord(object):
 
 
     def __setitem__(self, key, attributes):
+        """
+        """
         logger.info('setitem: %s - %s - %s' % (self.__json, str(key), attributes))
+        self.table.client.update_item(
+            Key={
+
+            }
+        )
+
 
     @property
     def json(self):
         return self.__json
+
+
+    def _get_keys(self):
+        try:
+            partition_key_value, sort_key_value = self.key
+            keys = {
+                self.table.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: str(partition_key_value) },
+                self.table.sort_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.sort_key[1]]: str(sort_key_value) }
+            }
+        except ValueError:
+            partition_key_value, sort_key_value = (self.key, None,)
+            keys = {
+                self.table.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: str(partition_key_value) }
+            }
+        except TypeError:
+            raise KeyError('Table was not defined with a sort key')
+
+        return keys
