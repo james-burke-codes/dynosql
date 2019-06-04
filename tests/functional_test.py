@@ -49,7 +49,9 @@ class FunctionalTestCase(unittest.TestCase):
     def test_insert_record_without_sort_key_but_retreive_with(self):
         self.tables['music'] = self.dyno(table_name='music', partition_key=('song', 'str',))
         self.tables['music']['Prince - Purple Rain'] = {'released': 1984, 'album': 'Purple Rain'}
-        self.assertRaises(KeyError)
+        with self.assertRaises(KeyError):
+            print(self.tables['music']['Prince, Purple Rain'])
+
 
     def test_reference_existing_table(self):
         self.tables['music'] = self.dyno(table_name='music', partition_key=('song', 'str',))
@@ -63,6 +65,16 @@ class FunctionalTestCase(unittest.TestCase):
         self.tables['music']['Prince', 'Purple Rain'] = {'released': 1983, 'album': 'Purple Rain'}
         self.tables['music']['Prince', 'Purple Rain']['released'] = 1984
         self.assertEqual(self.tables['music']['Prince', 'Purple Rain']['released'], 1984)
+
+
+    def test_delete_record(self):
+        self.tables['music'] = self.dyno(table_name='music', partition_key=('artist', 'str',), sort_key=('song', 'str',))
+        self.tables['music']['Prince', 'Purple Rain'] = {'released': 1983, 'album': 'Purple Rain'}
+        self.tables['music']['Prince', 'Raspberry Beret'] = {'released': 1985, 'album': 'Around the World in a Day'}
+        del self.tables['music']['Prince', 'Purple Rain']
+
+        with self.assertRaises(KeyError):
+            self.tables['music']['Prince', 'Purple Rain']
 
 if __name__ == '__main__':
     unittest.main()

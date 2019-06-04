@@ -81,7 +81,7 @@ class DynoTable(object):
 
 
     def __setitem__(self, key, attributes):
-        """ Inserts a new record or updates an existing one
+        """ Inserts a new record or replaces an existing one
 
         Parameters:
         key (tuple/string): can be a tuple if a composite key is used as primary key
@@ -92,21 +92,34 @@ class DynoTable(object):
         None: It is an assignment operator so cannot return a response
         """
         logger.info('setitem: %s - %s' % (key, attributes))
-        DynoRecord(self, key, attributes)
+        DynoRecord(self, self._get_keys(key), attributes)
 
 
     def __getitem__(self, key):
-        """ Retreive the record from DynamoDB based on the passed key
+        """ Retreive record with key
 
-        Parameters::
-        key (tuple/string): can be a tuple if a composite key is used as primary key
+        Parameters:
+        key (tuple/string): composite/primary key for the record
             otherwise a string containing the partition key
 
         Return:
         dict: Returns record from DynamoDB
         """
         logger.info('getitem: %s' % str(key))
-        return DynoRecord(self, key)
+        return DynoRecord(self, self._get_keys(key))
+
+
+    def __delitem__(self, key):
+        """ Delete record from a table
+
+        Parameters:
+        key (string/tuple): composite/primary key for the record
+        """
+        logger.info('delete: %s' % str(key))
+        self.client.delete_item(
+            TableName=self.table_name,
+            Key=self._get_keys(key)
+        )
 
 
     def __del__(self):
@@ -133,7 +146,25 @@ class DynoTable(object):
     @property
     def info(self):
         return self.__info
-    
+
+
+    def _get_keys(self, key):
+        try:
+            partition_key_value, sort_key_value = key
+            keys = {
+                self.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.partition_key[1]]: str(partition_key_value) },
+                self.sort_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.sort_key[1]]: str(sort_key_value) }
+            }
+        except ValueError:
+            partition_key_value, sort_key_value = (key, None,)
+            keys = {
+                self.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.partition_key[1]]: str(partition_key_value) }
+            }
+        except TypeError:
+            raise KeyError('Table was not defined with a sort key')
+
+        return keys
+
 
     def drop(self):
         """ __del__ isn't very reliable in testing

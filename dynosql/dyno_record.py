@@ -14,20 +14,22 @@ class DynoRecord(object):
     """
     def __init__(self, table, key, attributes=None):
         self.table = table
-        self.key = key
+        self.keys = key
         self.__json = { }
 
         if not attributes:
             # Fetching data
-            logger.info('fetching: %s' % str(self.key))
+            logger.info('fetching: %s' % str(self.keys))
 
-            keys = self._get_keys()
             try:
                 response = self.table.client.get_item(
                     TableName=self.table.table_name,
-                    Key=keys
+                    Key=self.keys
                 )
-                self.__json = UNFLUFF(response)
+                if 'Item' in response:
+                    self.__json = UNFLUFF(response)
+                else:
+                    raise KeyError("Record doesn't exist with key: %s" % str(key))
             except self.table.client.exceptions.ResourceNotFoundException as e:
                 # botocore.exceptions.ClientError
                 logger.error(e)
@@ -35,14 +37,14 @@ class DynoRecord(object):
                 raise KeyError(str(e))
         else:
             # Inserting data
-            logger.info('inserting: {%s : %s}' % (str(self.key), attributes))
+            logger.info('inserting: {%s : %s}' % (str(self.keys), attributes))
             items = {
                 attribute_name:
                 {
                     DYNAMODB_DATATYPES_LOOKUP[type(attribute_value).__name__]: str(attribute_value)
                 } for attribute_name, attribute_value in attributes.items()
             }
-            items = {**items, **self._get_keys()}
+            items = {**items, **self.keys}
             try:
                 self.describe = self.table.client.put_item(
                     TableName=self.table.table_name,
@@ -75,7 +77,7 @@ class DynoRecord(object):
         logger.info('setitem: %s - %s - %s' % (self.__json, str(key), attributes))
         self.table.client.update_item(
             TableName=self.table.table_name,
-            Key=self._get_keys(),
+            Key=self.keys,
             ExpressionAttributeNames={
                 '#X': str(key)
             },
@@ -92,20 +94,3 @@ class DynoRecord(object):
     def json(self):
         return self.__json
 
-
-    def _get_keys(self):
-        try:
-            partition_key_value, sort_key_value = self.key
-            keys = {
-                self.table.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: str(partition_key_value) },
-                self.table.sort_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.sort_key[1]]: str(sort_key_value) }
-            }
-        except ValueError:
-            partition_key_value, sort_key_value = (self.key, None,)
-            keys = {
-                self.table.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: str(partition_key_value) }
-            }
-        except TypeError:
-            raise KeyError('Table was not defined with a sort key')
-
-        return keys
