@@ -1,4 +1,6 @@
+import logging
 
+logger = logging.getLogger(__name__)
 
 # https://docs.amazonaws.cn/en_us/amazondynamodb/latest/developerguide/HowItWorks.NamingRulesDataTypes.html#HowItWorks.DataTypes
 # partition key can only be (S, N, B)
