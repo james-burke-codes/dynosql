@@ -42,17 +42,7 @@ class DynoRecord(object):
                     DYNAMODB_DATATYPES_LOOKUP[type(attribute_value).__name__]: str(attribute_value)
                 } for attribute_name, attribute_value in attributes.items()
             }
-
             items = {**items, **self._get_keys()}
-
-            # try:
-            #     partition_key_value, sort_key_value = self.key
-            #     items[self.table.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: str(partition_key_value) }
-            #     items[self.table.sort_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.sort_key[1]]: str(sort_key_value) }
-            # except ValueError:
-            #     partition_key_value, sort_key_value = (self.key, None,)
-            #     items[self.table.partition_key[0]] = { DYNAMODB_DATATYPES_LOOKUP[self.table.partition_key[1]]: str(partition_key_value) }
-
             try:
                 self.describe = self.table.client.put_item(
                     TableName=self.table.table_name,
@@ -84,9 +74,17 @@ class DynoRecord(object):
         """
         logger.info('setitem: %s - %s - %s' % (self.__json, str(key), attributes))
         self.table.client.update_item(
-            Key={
-
-            }
+            TableName=self.table.table_name,
+            Key=self._get_keys(),
+            ExpressionAttributeNames={
+                '#X': str(key)
+            },
+            ExpressionAttributeValues={
+                ':y': {
+                    DYNAMODB_DATATYPES_LOOKUP[type(attributes).__name__]: str(attributes),
+                },
+            },
+            UpdateExpression='SET #X = :y',
         )
 
 
