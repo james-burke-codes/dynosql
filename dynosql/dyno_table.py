@@ -210,7 +210,7 @@ class DynoTable(object):
         logger.info(response)
         logger.info(UNFLUFF(response))
 
-        return response
+        return UNFLUFF(response)
 
         # response = client.scan(
         #     ExpressionAttributeNames={
