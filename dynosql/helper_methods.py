@@ -29,6 +29,12 @@ DYNAMODB_DATATYPES_LOOKUP2 = {
    # string set, number set, and binary set.
 }
 
+DYNAMODB_EXPRESSION_LOOKUP = {
+    '==': '=',
+}
+
+ATTRIBUTE_VALUES = 'abcdefghijklmnopqrstuvwxyz'
+
 def DYNAMODB_DATATYPES_REVERSE_LOOKUP(db_type, value=None):
     """ Convert dynamodb datatypes into python datatypes
     """
@@ -62,6 +68,13 @@ def UNFLUFF(fluff):
     Returns:
     dict: Returns unfluffed  response from DynamoDB
     """
+    if fluff.get('Items'):
+        return {
+            k: DYNAMODB_DATATYPES_REVERSE_LOOKUP(
+                list(v)[0],
+                list(v.values())[0])(list(v.values())[0])
+            for k, v in fluff['Items'].items()
+        }
     return {
         k: DYNAMODB_DATATYPES_REVERSE_LOOKUP(
             list(v)[0],
