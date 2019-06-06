@@ -34,20 +34,21 @@ music['White Stripes', 'Friends']['released'] = 2001
 # delete table
 del music_ex3
 # or
-music_ex.drop()
+music_ex3.drop()
 
 
 # delete record
 del music['White Stripes', 'Friends']
+
+
+# select by condition on non-primary key attributes
+music.filter(lambda released: released == 2002)
 ```
 _Note: `music['White Stripes - Friends']` itself will return a DynoRecord object so you must use `.json` to get the record_
 
 ## Planned features
 
 ```python
-# select by condition on non-primary key attributes
-music.filter(lambda released: released == 2002)
-
 # bulk insert
 music.extend(
     { artist: 'White Stripes', song: 'Friends', released: 2002, album: 'White Blood Cells'},
