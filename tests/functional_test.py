@@ -76,5 +76,13 @@ class FunctionalTestCase(unittest.TestCase):
         with self.assertRaises(KeyError):
             self.tables['music']['Prince', 'Purple Rain']
 
+
+    def test_filter_on_non_key(self):
+        self.tables['music'] = self.dyno(table_name='music', partition_key=('artist', 'str',), sort_key=('song', 'str',))
+        self.tables['music']['Prince', 'Purple Rain'] = {'released': 1983, 'album': 'Purple Rain'}
+        self.tables['music']['Prince', 'Raspberry Beret'] = {'released': 1985, 'album': 'Around the World in a Day'}
+
+        self.assertEqual(self.tables['music'].filter(lambda released: released == 1985)['artist'], 'Prince')
+
 if __name__ == '__main__':
     unittest.main()
