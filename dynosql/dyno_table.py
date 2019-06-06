@@ -8,6 +8,7 @@ from dynosql.helper_methods import DYNAMODB_DATATYPES_LOOKUP
 from dynosql.helper_methods import DYNAMODB_DATATYPES_LOOKUP2
 from dynosql.helper_methods import DYNAMODB_DATATYPES_REVERSE_LOOKUP
 from dynosql.helper_methods import UNFLUFF
+from dynosql.helper_methods import ATTRIBUTE_VALUES
 
 class DynoTable(object):
     """ DynoTable is a wrapper class around botocore. Each instance references a table in DynamoDB
@@ -165,6 +166,66 @@ class DynoTable(object):
 
         return keys
 
+
+    def filter(self, filter_expression):
+        import inspect
+        import re
+        expression = inspect.getsource(filter_expression)
+        logger.info('in expression: %s' % expression)
+        expression = re.search(r'.filter\((.*?)(\))', expression).group(1)
+        logger.info(expression)
+        arguments, expression = expression.replace('lambda ', '').split(': ')
+
+        expression_attribute_values = {}
+        filter_expression_values = ''
+        logger.info(expression)
+        # and operatoions
+        for i, expressions in enumerate(expression.split(' AND ')):
+            logger.info(expressions)
+            expression = expression.split(' ')
+            logger.info(expression)
+            logger.info(ATTRIBUTE_VALUES[i])
+            filter_expression_values += '{0} {1} :{2}'.format(
+                expression[0],
+                expression[1].replace('==', '='),
+                ATTRIBUTE_VALUES[i]
+            )
+            logger.info(filter_expression_values)
+            expression_attribute_values[':{}'.format(ATTRIBUTE_VALUES[i])] = {
+                'N': expression[2]
+            }
+            logger.info(expression_attribute_values)
+
+
+        # or operations
+        #expression = expression.split(' ')
+        #logger.info('out expression: %s' % (expression))
+ 
+
+        response =  self.client.scan(
+            TableName=self.table_name,
+            ExpressionAttributeValues=expression_attribute_values,
+            FilterExpression=filter_expression_values
+        )
+        logger.info(response)
+        logger.info(UNFLUFF(response))
+
+        return response
+
+        # response = client.scan(
+        #     ExpressionAttributeNames={
+        #         'AT': 'AlbumTitle',
+        #         'ST': 'SongTitle',
+        #     },
+        #     ExpressionAttributeValues={
+        #         ':a': {
+        #             'S': 'No One You Know',
+        #         },
+        #     },
+        #     FilterExpression='Artist = :a',
+        #     ProjectionExpression='#ST, #AT',
+        #     TableName='Music',
+        # )
 
     def drop(self):
         """ __del__ isn't very reliable in testing
