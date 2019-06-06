@@ -69,12 +69,12 @@ def UNFLUFF(fluff):
     dict: Returns unfluffed  response from DynamoDB
     """
     if fluff.get('Items'):
-        return {
+        return [{
             k: DYNAMODB_DATATYPES_REVERSE_LOOKUP(
                 list(v)[0],
                 list(v.values())[0])(list(v.values())[0])
-            for k, v in fluff['Items'].items()
-        }
+            for k, v in x.items()
+        } for x in fluff['Items']]
     return {
         k: DYNAMODB_DATATYPES_REVERSE_LOOKUP(
             list(v)[0],
