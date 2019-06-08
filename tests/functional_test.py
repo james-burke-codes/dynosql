@@ -82,7 +82,17 @@ class FunctionalTestCase(unittest.TestCase):
         self.tables['music']['Prince', 'Purple Rain'] = {'released': 1983, 'album': 'Purple Rain'}
         self.tables['music']['Prince', 'Raspberry Beret'] = {'released': 1985, 'album': 'Around the World in a Day'}
 
-        self.assertEqual(self.tables['music'].filter(lambda released: released == 1985)[0]['artist'], 'Prince')
+        with self.subTest(name="equal comparison"):
+            self.assertEqual(self.tables['music'].filter(lambda released: released == 1985)[0]['album'], 'Around the World in a Day')
+
+        with self.subTest(name="not equal comparison"):
+            self.assertEqual(self.tables['music'].filter(lambda released: released != 1985)[0]['album'], 'Purple Rain')
+
+        with self.subTest(name="no result"):
+            logger.info(self.tables['music'].filter(lambda released: released > 1983))
+            with self.assertRaises(IndexError):
+                self.tables['music'].filter(lambda released: released == 1980)[0]['album']
+
 
 if __name__ == '__main__':
     unittest.main()
