@@ -29,8 +29,16 @@ DYNAMODB_DATATYPES_LOOKUP2 = {
    # string set, number set, and binary set.
 }
 
+# Functions: attribute_exists | attribute_not_exists | attribute_type | contains | begins_with | size These function names are case-sensitive.
+# Comparison operators: = | <> | < | > | <= | >= | BETWEEN | IN
+# Logical operators: AND | OR | NOT
 DYNAMODB_EXPRESSION_LOOKUP = {
+    '!=': '<>',
     '==': '=',
+    '<': '<',
+    '>': '>',
+    '<=': '<=',
+    '>=': '>='
 }
 
 ATTRIBUTE_VALUES = 'abcdefghijklmnopqrstuvwxyz'
@@ -68,16 +76,17 @@ def UNFLUFF(fluff):
     Returns:
     dict: Returns unfluffed  response from DynamoDB
     """
-    if fluff.get('Items'):
+    try:
         return [{
             k: DYNAMODB_DATATYPES_REVERSE_LOOKUP(
                 list(v)[0],
                 list(v.values())[0])(list(v.values())[0])
             for k, v in x.items()
         } for x in fluff['Items']]
-    return {
-        k: DYNAMODB_DATATYPES_REVERSE_LOOKUP(
-            list(v)[0],
-            list(v.values())[0])(list(v.values())[0])
-        for k, v in fluff['Item'].items()
-    }
+    except KeyError:
+        return {
+            k: DYNAMODB_DATATYPES_REVERSE_LOOKUP(
+                list(v)[0],
+                list(v.values())[0])(list(v.values())[0])
+            for k, v in fluff['Item'].items()
+        }
