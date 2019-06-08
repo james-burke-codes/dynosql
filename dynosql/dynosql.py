@@ -25,8 +25,8 @@ class Dynosql(object):
 
         Parameters:
         table_name (string):
-        partition_key (string):
-        sort_key (string):
+        partition_key (tuple):
+        sort_key (tuple):
         attributes (dict):
 
         Returns:
