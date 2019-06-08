@@ -8,7 +8,7 @@ from dynosql.helper_methods import DYNAMODB_DATATYPES_LOOKUP
 from dynosql.helper_methods import DYNAMODB_DATATYPES_LOOKUP2
 from dynosql.helper_methods import DYNAMODB_DATATYPES_REVERSE_LOOKUP
 from dynosql.helper_methods import UNFLUFF
-from dynosql.helper_methods import ATTRIBUTE_VALUES
+from dynosql.helper_methods import ATTRIBUTE_VALUES, DYNAMODB_EXPRESSION_LOOKUP
 
 class DynoTable(object):
     """ DynoTable is a wrapper class around botocore. Each instance references a table in DynamoDB
@@ -185,9 +185,12 @@ class DynoTable(object):
             expression = expression.split(' ')
             logger.info(expression)
             logger.info(ATTRIBUTE_VALUES[i])
+            logger.info(DYNAMODB_EXPRESSION_LOOKUP)
+            logger.info(expression[1])
+            logger.info(DYNAMODB_EXPRESSION_LOOKUP[expression[1]])
             filter_expression_values += '{0} {1} :{2}'.format(
                 expression[0],
-                expression[1].replace('==', '='),
+                DYNAMODB_EXPRESSION_LOOKUP[expression[1]], #.replace('==', '='),
                 ATTRIBUTE_VALUES[i]
             )
             logger.info(filter_expression_values)
@@ -212,20 +215,6 @@ class DynoTable(object):
 
         return UNFLUFF(response)
 
-        # response = client.scan(
-        #     ExpressionAttributeNames={
-        #         'AT': 'AlbumTitle',
-        #         'ST': 'SongTitle',
-        #     },
-        #     ExpressionAttributeValues={
-        #         ':a': {
-        #             'S': 'No One You Know',
-        #         },
-        #     },
-        #     FilterExpression='Artist = :a',
-        #     ProjectionExpression='#ST, #AT',
-        #     TableName='Music',
-        # )
 
     def drop(self):
         """ __del__ isn't very reliable in testing
