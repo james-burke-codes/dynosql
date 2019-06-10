@@ -170,40 +170,52 @@ class DynoTable(object):
     def filter(self, filter_expression):
         import inspect
         import re
+
         expression = inspect.getsource(filter_expression)
         logger.info('in expression: %s' % expression)
-        expression = re.search(r'.filter\((.*?)(\))', expression).group(1)
-        logger.info(expression)
-        arguments, expression = expression.replace('lambda ', '').split(': ')
+        lambda_expression = re.search(r'.filter\((.*?)(\))', expression).group(1)
+        logger.info(lambda_expression)
+
+        arguments, expression = lambda_expression.replace('lambda ', '').split(': ')
 
         expression_attribute_values = {}
-        filter_expression_values = ''
-        logger.info(expression)
-        # and operatoions
-        for i, expressions in enumerate(expression.split(' AND ')):
-            logger.info(expressions)
-            expression = expression.split(' ')
-            logger.info(expression)
-            logger.info(ATTRIBUTE_VALUES[i])
-            logger.info(DYNAMODB_EXPRESSION_LOOKUP)
-            logger.info(expression[1])
-            logger.info(DYNAMODB_EXPRESSION_LOOKUP[expression[1]])
-            filter_expression_values += '{0} {1} :{2}'.format(
-                expression[0],
-                DYNAMODB_EXPRESSION_LOOKUP[expression[1]], #.replace('==', '='),
-                ATTRIBUTE_VALUES[i]
-            )
-            logger.info(filter_expression_values)
-            expression_attribute_values[':{}'.format(ATTRIBUTE_VALUES[i])] = {
-                'N': expression[2]
-            }
-            logger.info(expression_attribute_values)
+        filter_expression_values = expression
+        expression_value_i = 0
+        for expression_ in filter_expression_values.split(' and '):
+            for expression__ in expression_.split(' or '):
+                try:
+                    expression_groups = re.search(r'^(.*?)(==|<>|<|>|<=|>=|!=| in | not in )(.*?)$', expression__).groups()
+                    logger.info(expression_groups)
+                    expression_attribute, expression_operator, expression_value = expression_groups
 
+                    logger.info(expression__)
+                    filter_expression_values = filter_expression_values.replace(expression__, '{} {} {}'.format(
+                        expression_attribute.strip(),
+                        DYNAMODB_EXPRESSION_LOOKUP[expression_operator],
+                        ':{}'.format(ATTRIBUTE_VALUES[expression_value_i])
+                    ))
+                    logger.info('{} {} {}'.format(expression_attribute.strip(), DYNAMODB_EXPRESSION_LOOKUP[expression_operator], ':{}'.format(ATTRIBUTE_VALUES[expression_value_i])))
+                    # remove quotes
+                    expression_type = 'S'
+                    expression_value = expression_value.strip()
+                    if expression_value.strip().startswith("\'") or expression_value.startswith('\"'):
+                        expression_value = expression_value.replace('\"', '').replace("\'", '')
+                        expression_type = 'S'
+                    elif expression_value.strip().isdigit():
+                        expression_value = expression_value
+                        expression_type = 'N'
 
-        # or operations
-        #expression = expression.split(' ')
-        #logger.info('out expression: %s' % (expression))
- 
+                    expression_attribute_values[':{}'.format(ATTRIBUTE_VALUES[expression_value_i])] = {
+                        expression_type: expression_value
+                    }
+                    expression_value_i += 1
+                except AttributeError:
+                    logger.error('Unable to parse expression: {}'.format(expression__))
+
+        # debug
+        logger.info(arguments)
+        logger.info(filter_expression_values)
+        logger.info(expression_attribute_values)
 
         response =  self.client.scan(
             TableName=self.table_name,

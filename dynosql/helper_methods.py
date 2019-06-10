@@ -43,6 +43,8 @@ DYNAMODB_EXPRESSION_LOOKUP = {
 
 ATTRIBUTE_VALUES = 'abcdefghijklmnopqrstuvwxyz'
 
+
+
 def DYNAMODB_DATATYPES_REVERSE_LOOKUP(db_type, value=None):
     """ Convert dynamodb datatypes into python datatypes
     """
