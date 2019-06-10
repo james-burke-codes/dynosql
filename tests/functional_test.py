@@ -83,7 +83,10 @@ class FunctionalTestCase(unittest.TestCase):
         self.tables['music']['Prince', 'Raspberry Beret'] = {'released': 1985, 'album': 'Around the World in a Day'}
 
         with self.subTest(name="equal comparison"):
-            self.assertEqual(self.tables['music'].filter(lambda released: released == 1985)[0]['album'], 'Around the World in a Day')
+            self.assertEqual(self.tables['music'].filter(
+                lambda released, album: released == 1985 and album == 'Around the World in a Day')[0]['album'],
+                'Around the World in a Day'
+            )
 
         with self.subTest(name="not equal comparison"):
             self.assertEqual(self.tables['music'].filter(lambda released: released != 1985)[0]['album'], 'Purple Rain')
