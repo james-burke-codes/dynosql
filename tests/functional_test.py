@@ -83,18 +83,24 @@ class FunctionalTestCase(unittest.TestCase):
         self.tables['music']['Prince', 'Raspberry Beret'] = {'released': 1985, 'album': 'Around the World in a Day'}
 
         with self.subTest(name="equal comparison"):
+            logger.info('Test: released == 1983')
             self.assertEqual(self.tables['music'].filter(
-                lambda released, album: released == 1985 and album == 'Around the World in a Day')[0]['album'],
-                'Around the World in a Day'
-            )
+                self.tables['music'].released == 1983
+            )[0]['album'], 'Around the World in a Day')
 
-        with self.subTest(name="not equal comparison"):
-            self.assertEqual(self.tables['music'].filter(lambda released: released != 1985)[0]['album'], 'Purple Rain')
+        # with self.subTest(name="equal or comparison"):
+        #     self.assertEqual(self.tables['music'].filter(
+        #         lambda released: released == 1985 or released == 1983)[0]['album'],
+        #         'Around the World in a Day'
+        #     )
 
-        with self.subTest(name="no result"):
-            logger.info(self.tables['music'].filter(lambda released: released > 1983))
-            with self.assertRaises(IndexError):
-                self.tables['music'].filter(lambda released: released == 1980)[0]['album']
+        # with self.subTest(name="not equal comparison"):
+        #     self.assertEqual(self.tables['music'].filter(lambda released: released != 1985)[0]['album'], 'Purple Rain')
+
+        # with self.subTest(name="no result"):
+        #     logger.info(self.tables['music'].filter(lambda released: released > 1983))
+        #     with self.assertRaises(IndexError):
+        #         self.tables['music'].filter(lambda released: released == 1980)[0]['album']
 
 
 if __name__ == '__main__':
