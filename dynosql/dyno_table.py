@@ -190,17 +190,35 @@ class DynoTable(object):
 
         exp_attribute, exp_operator, exp_value = filter_expression
 
-        filter_expression_values = "{} {} {}".format(
+        filter_expression_values = "{} {} :{}".format(
             exp_attribute,
-            exp_value,
+            exp_operator,
             ATTRIBUTE_VALUES[0]
         )
 
-        expression_attribute_values[':{}'.format(ATTRIBUTE_VALUES[0])] = {
-            DYNAMODB_DATATYPES_LOOKUP[type(expression_type).__name__]: exp_value
+        expression_attribute_values = {
+            ':{}'.format(ATTRIBUTE_VALUES[0]): {
+                DYNAMODB_DATATYPES_LOOKUP[type(exp_value).__name__]: str(exp_value)
+            }
         }
 
-        return None
+        logger.info(filter_expression_values)
+        logger.info(expression_attribute_values)
+
+        response =  self.client.scan(
+            TableName=self.table_name,
+            ExpressionAttributeValues=expression_attribute_values,
+            FilterExpression=filter_expression_values
+        )
+        logger.info(response)
+        logger.info(UNFLUFF(response))
+
+        return UNFLUFF(response)
+
+
+
+
+
         expression = inspect.getsource(filter_expression)
         logger.info('in expression: %s' % expression)
         lambda_expression = re.search(r'.filter\((.*?)(\))', expression).group(1)

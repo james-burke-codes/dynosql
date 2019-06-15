@@ -86,7 +86,7 @@ class FunctionalTestCase(unittest.TestCase):
             logger.info('Test: released == 1983')
             self.assertEqual(self.tables['music'].filter(
                 self.tables['music'].released == 1983
-            )[0]['album'], 'Around the World in a Day')
+            )[0]['album'], 'Purple Rain')
 
         # with self.subTest(name="equal or comparison"):
         #     self.assertEqual(self.tables['music'].filter(
