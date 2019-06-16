@@ -36,58 +36,6 @@ class DynoTable(object):
         logger.info(sort_key)
         self.__info = self.adapter.create_table(table_name=table_name, partition_key=partition_key, sort_key=sort_key, attributes=attributes)
 
-        ## commented for injection
-        # KeySchema = []
-        # AttributeDefinitions = []
-
-        # if partition_key:
-        #     KeySchema.append({ 'AttributeName': partition_key[0], 'KeyType': 'HASH' })
-        #     AttributeDefinitions.append(
-        #         {
-        #             'AttributeName': partition_key[0],
-        #             'AttributeType': DYNAMODB_DATATYPES_LOOKUP[partition_key[1]]
-        #         }
-        #     )
-        # if sort_key:
-        #     KeySchema.append({ 'AttributeName': sort_key[0], 'KeyType': 'RANGE' })
-        #     AttributeDefinitions.append(
-        #         {
-        #             'AttributeName': sort_key[0],
-        #             'AttributeType': DYNAMODB_DATATYPES_LOOKUP[sort_key[1]]
-        #         }
-        #     )
-        # logger.info(KeySchema)
-        # logger.info(AttributeDefinitions)
-
-        # try:
-        #     description = self.client.create_table(
-        #         TableName=table_name,
-        #         KeySchema=KeySchema,
-        #         AttributeDefinitions=AttributeDefinitions,
-        #         ProvisionedThroughput={
-        #             'ReadCapacityUnits': 5,
-        #             'WriteCapacityUnits': 5,
-        #         },
-        #     )
-        #     description['Table'] = description['TableDescription']
-        #     del description['TableDescription']
-        #     self.__info = description
-        # except botocore.exceptions.ParamValidationError as e:
-        #     description = self.client.describe_table(TableName=table_name)
-        #     #logger.info(description['Table'])
-        #     self.partition_key = (
-        #         description['Table']['AttributeDefinitions'][0]['AttributeName'],
-        #         DYNAMODB_DATATYPES_LOOKUP2[description['Table']['AttributeDefinitions'][0]['AttributeType']]
-        #     )
-        #     try:
-        #         self.sort_key = (
-        #             description['Table']['AttributeDefinitions'][1]['AttributeName'],
-        #             DYNAMODB_DATATYPES_LOOKUP2[description['Table']['AttributeDefinitions'][1]['AttributeType']]
-        #         )
-        #     except IndexError:
-        #         pass
-        #     self.__info = description
-
 
     def __setitem__(self, primary_key, attributes):
         """ Inserts a new record or replaces an existing one
@@ -101,7 +49,6 @@ class DynoTable(object):
         None: It is an assignment operator so cannot return a response
         """
         logger.info('setitem: %s - %s' % (primary_key, attributes))
-        #DynoRecord(self, self._get_keys(key), attributes)
         DynoRecord(self.adapter, self.table_name, primary_key, attributes)
 
 
@@ -116,8 +63,6 @@ class DynoTable(object):
         dict: Returns record from DynamoDB
         """
         logger.info('getitem: %s' % str(primary_key))
-        ## migration
-        #return DynoRecord(self, self._get_keys(key))
         return DynoRecord(self.adapter, self.table_name, primary_key)
 
 
@@ -128,11 +73,6 @@ class DynoTable(object):
         primary_key (string/tuple): composite/primary key for the record
         """
         logger.info('delete: %s' % str(primary_key))
-        ## migration
-        # self.client.delete_item(
-        #     TableName=self.table_name,
-        #     Key=self._get_keys(key)
-        # )
         self.adapter.delete_item(self.table_name, primary_key)
 
 
@@ -145,17 +85,6 @@ class DynoTable(object):
         Return:
         None
         """
-        ## Migration
-        # try:
-        #     self.client.delete_table(TableName=self.table_name)
-        #     logger.debug('deleted %s' % self.table_name)
-        # except ReferenceError:
-        #     # This method is always called when the class is destroyed
-        #     # if it is not called explicitly it will raise a ReferenceError
-        #     pass
-        # except self.client.exceptions.ResourceNotFoundException:
-        #     # table doesn't exist
-        #     pass
         self.adapter.delete_table(self.table_name)
 
 
@@ -163,23 +92,6 @@ class DynoTable(object):
     def info(self):
         return self.__info
 
-
-    # def _get_keys(self, key):
-    #     try:
-    #         partition_key_value, sort_key_value = key
-    #         keys = {
-    #             self.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.partition_key[1]]: str(partition_key_value) },
-    #             self.sort_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.sort_key[1]]: str(sort_key_value) }
-    #         }
-    #     except ValueError:
-    #         partition_key_value, sort_key_value = (key, None,)
-    #         keys = {
-    #             self.partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.partition_key[1]]: str(partition_key_value) }
-    #         }
-    #     except TypeError:
-    #         raise KeyError('Table was not defined with a sort key')
-
-    #     return keys
 
     def __getattr__(self, name):
         logger.info(name)
@@ -197,40 +109,6 @@ class DynoTable(object):
         logger.info(filter_expression)
         return self.adapter.filter(self.table_name, filter_expression)
 
-        ## Migration
-        # import inspect
-        # import re
-
-        # #logger.info(self.queries)
-        # logger.info(filter_expression)
-
-        # exp_attribute, exp_operator, exp_value = filter_expression
-
-        # filter_expression_values = "{} {} :{}".format(
-        #     exp_attribute,
-        #     exp_operator,
-        #     ATTRIBUTE_VALUES[0]
-        # )
-
-        # expression_attribute_values = {
-        #     ':{}'.format(ATTRIBUTE_VALUES[0]): {
-        #         DYNAMODB_DATATYPES_LOOKUP[type(exp_value).__name__]: str(exp_value)
-        #     }
-        # }
-
-        # logger.info(filter_expression_values)
-        # logger.info(expression_attribute_values)
-
-        # response =  self.client.scan(
-        #     TableName=self.table_name,
-        #     ExpressionAttributeValues=expression_attribute_values,
-        #     FilterExpression=filter_expression_values
-        # )
-        # logger.info(response)
-        # logger.info(UNFLUFF(response))
-
-        # return UNFLUFF(response)
-
 
     def drop(self):
         """ __del__ isn't very reliable in testing
@@ -243,10 +121,4 @@ class DynoTable(object):
         None
         """
         self.adapter.delete_table(self.table_name)
-        ## Migration
-        # try:
-        #     self.client.delete_table(TableName=self.table_name)
-        #     logger.debug('deleted %s' % self.table_name)
-        # except self.client.exceptions.ResourceNotFoundException:
-        #     # table doesn't exist
-        #     pass
+

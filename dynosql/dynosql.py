@@ -52,6 +52,6 @@ class Dynosql(object):
         """
         table_list = self.adapter.list_tables()
         logger.info(table_list)
-        return table_list #self.adapter.list_tables()['TableNames']
+        return table_list
 
 
