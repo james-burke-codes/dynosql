@@ -102,7 +102,7 @@ class BotocoreAdapter(object):
         logger.info('initialised botocore...')
 
 
-    def _get_keys(self, tables_name):
+    def _get_keys(self, table_name, key):
 
         try:
             partition_key_value, sort_key_value = key
@@ -201,12 +201,12 @@ class BotocoreAdapter(object):
 
     def get_item(self, table_name, key):
         # WIP - figure out key with _get_keys function
-        logger.info('fetching: %s' % str(self.keys))
+        logger.info('fetching: %s' % key)
 
         try:
             response = self.table.client.get_item(
                 TableName=table_name,
-                Key=self.keys
+                Key=self._get_keys(table_name, key)
             )
             if 'Item' in response:
                 return UNFLUFF(response)
@@ -221,14 +221,14 @@ class BotocoreAdapter(object):
 
     def put_item(self, table_name, key, attributes):
         # WIP - figure out key with _get_keys function
-        logger.info('inserting: {%s : %s}' % (str(self.keys), attributes))
+        logger.info('inserting: {%s : %s}' % (key, attributes))
         items = {
             attribute_name:
             {
                 DYNAMODB_DATATYPES_LOOKUP[type(attribute_value).__name__]: str(attribute_value)
             } for attribute_name, attribute_value in attributes.items()
         }
-        items = {**items, **self.keys}
+        items = {**items, **self._get_keys(table_name, key)}
         try:
             self.describe = self.client.put_item(
                 TableName=table_name,
@@ -242,7 +242,7 @@ class BotocoreAdapter(object):
         logger.info('setitem: %s - %s - %s' % (self.__json, str(key), attributes))
         self.client.update_item(
             TableName=table_name,
-            Key=self.keys,
+            Key=self._get_keys(table_name, key),
             ExpressionAttributeNames={
                 '#X': str(key)
             },
@@ -258,7 +258,7 @@ class BotocoreAdapter(object):
     def delete_item(self, table_name, key):
         self.client.delete_item(
             TableName=table_name,
-            Key=self._get_keys(key)
+            Key=self._get_keys(table_name, key)
         )
 
     def filter(self, table_name, filter_expression):
