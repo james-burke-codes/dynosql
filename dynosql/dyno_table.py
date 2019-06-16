@@ -4,11 +4,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 from dynosql.dyno_record import DynoRecord
+from dynosql.dyno_attribute import DynoAttribute
+
 from dynosql.helper_methods import DYNAMODB_DATATYPES_LOOKUP
 from dynosql.helper_methods import DYNAMODB_DATATYPES_LOOKUP2
 from dynosql.helper_methods import DYNAMODB_DATATYPES_REVERSE_LOOKUP
 from dynosql.helper_methods import UNFLUFF
 from dynosql.helper_methods import ATTRIBUTE_VALUES, DYNAMODB_EXPRESSION_LOOKUP
+
 
 class DynoTable(object):
     """ DynoTable is a wrapper class around botocore. Each instance references a table in DynamoDB
@@ -28,6 +31,7 @@ class DynoTable(object):
         self.partition_key = partition_key
         self.sort_key = sort_key
         self.__info = None
+        self.queries = []
 
         KeySchema = []
         AttributeDefinitions = []
@@ -166,10 +170,54 @@ class DynoTable(object):
 
         return keys
 
+    def __getattr__(self, name):
+        logger.info(name)
+        #self.queries.append(DynoAttribute(name))
+        return DynoAttribute(name) #self.queries[-1]
+
+    def __setattr__(self, name, value):
+        logger.info(name)
+        logger.info(value)
+        super(DynoTable, self).__setattr__(name, value)
+
 
     def filter(self, filter_expression):
         import inspect
         import re
+
+        #logger.info(self.queries)
+        logger.info(filter_expression)
+
+        exp_attribute, exp_operator, exp_value = filter_expression
+
+        filter_expression_values = "{} {} :{}".format(
+            exp_attribute,
+            exp_operator,
+            ATTRIBUTE_VALUES[0]
+        )
+
+        expression_attribute_values = {
+            ':{}'.format(ATTRIBUTE_VALUES[0]): {
+                DYNAMODB_DATATYPES_LOOKUP[type(exp_value).__name__]: str(exp_value)
+            }
+        }
+
+        logger.info(filter_expression_values)
+        logger.info(expression_attribute_values)
+
+        response =  self.client.scan(
+            TableName=self.table_name,
+            ExpressionAttributeValues=expression_attribute_values,
+            FilterExpression=filter_expression_values
+        )
+        logger.info(response)
+        logger.info(UNFLUFF(response))
+
+        return UNFLUFF(response)
+
+
+
+
 
         expression = inspect.getsource(filter_expression)
         logger.info('in expression: %s' % expression)
