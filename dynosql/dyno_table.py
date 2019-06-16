@@ -195,7 +195,7 @@ class DynoTable(object):
     def filter(self, filter_expression):
         # logger.info(self.queries)
         logger.info(filter_expression)
-        self.adapter.filter(self.table_name, filter_expression)
+        return self.adapter.filter(self.table_name, filter_expression)
 
         ## Migration
         # import inspect

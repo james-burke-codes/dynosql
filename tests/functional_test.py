@@ -37,35 +37,37 @@ class FunctionalTestCase(unittest.TestCase):
         self.tables['music']['Prince', 'Purple Rain'] = {'released': 1984, 'album': 'Purple Rain'}
         self.assertEqual(self.tables['music']['Prince', 'Purple Rain']['released'], 1984)
 
-    # def test_insert_record_without_sort_key(self):
-    #     self.tables['music'] = self.dyno(table_name='music', partition_key=('song', 'str',))
-    #     self.tables['music']['Prince - Purple Rain'] = {'released': 1984, 'album': 'Purple Rain'}
-    #     self.assertEqual(self.tables['music']['Prince - Purple Rain']['released'], 1984)
+    def test_insert_record_without_sort_key(self):
+        self.tables['music'] = self.dyno(table_name='music', partition_key=('song', 'str',))
+        self.tables['music']['Prince - Purple Rain'] = {'released': 1984, 'album': 'Purple Rain'}
+        self.assertEqual(self.tables['music']['Prince - Purple Rain']['released'], 1984)
 
-    # def test_insert_record_with_sort_key_but_retreive_without(self):
-    #     self.tables['music'] = self.dyno(table_name='music', partition_key=('artist', 'str',), sort_key=('song', 'str',))
-    #     self.tables['music']['Prince', 'Purple Rain'] = {'released': 1984, 'album': 'Purple Rain'}
-    #     self.assertRaises(KeyError)
+    def test_insert_record_with_sort_key_but_retreive_without(self):
+        self.tables['music'] = self.dyno(table_name='music', partition_key=('artist', 'str',), sort_key=('song', 'str',))
+        self.tables['music']['Prince', 'Purple Rain'] = {'released': 1984, 'album': 'Purple Rain'}
+        self.assertRaises(KeyError)
 
-    # def test_insert_record_without_sort_key_but_retreive_with(self):
-    #     self.tables['music'] = self.dyno(table_name='music', partition_key=('song', 'str',))
-    #     self.tables['music']['Prince - Purple Rain'] = {'released': 1984, 'album': 'Purple Rain'}
-    #     with self.assertRaises(KeyError):
-    #         print(self.tables['music']['Prince, Purple Rain'])
+    def test_insert_record_without_sort_key_but_retreive_with(self):
+        self.tables['music'] = self.dyno(table_name='music', partition_key=('song', 'str',))
+        self.tables['music']['Prince - Purple Rain'] = {'released': 1984, 'album': 'Purple Rain'}
+        with self.assertRaises(KeyError):
+            print(self.tables['music']['Prince, Purple Rain'])
 
 
-    # def test_reference_existing_table(self):
-    #     self.tables['music'] = self.dyno(table_name='music', partition_key=('song', 'str',))
-    #     self.tables['music']['Prince - Purple Rain'] = {'released': 1984, 'album': 'Purple Rain'}
+    def test_reference_existing_table(self):
+        self.tables['music'] = self.dyno(table_name='music', partition_key=('song', 'str',))
+        self.tables['music']['Prince - Purple Rain'] = {'released': 1984, 'album': 'Purple Rain'}
 
-    #     self.tables['music2'] = self.dyno(table_name='music')
-    #     self.assertEqual(self.tables['music2']['Prince - Purple Rain']['released'], 1984)
+        self.tables['music2'] = self.dyno(table_name='music')
+        self.assertEqual(self.tables['music2']['Prince - Purple Rain']['released'], 1984)
 
-    # def test_update_record_argument(self):
-    #     self.tables['music'] = self.dyno(table_name='music', partition_key=('artist', 'str',), sort_key=('song', 'str',))
-    #     self.tables['music']['Prince', 'Purple Rain'] = {'released': 1983, 'album': 'Purple Rain'}
-    #     self.tables['music']['Prince', 'Purple Rain']['released'] = 1984
-    #     self.assertEqual(self.tables['music']['Prince', 'Purple Rain']['released'], 1984)
+    def test_update_record_argument(self):
+        self.tables['music'] = self.dyno(table_name='music', partition_key=('artist', 'str',), sort_key=('song', 'str',))
+        logger.info('create record')
+        self.tables['music']['Prince', 'Purple Rain'] = {'released': 1983, 'album': 'Purple Rain'}
+        logger.info('update item')
+        self.tables['music']['Prince', 'Purple Rain']['released'] = 1984
+        self.assertEqual(self.tables['music']['Prince', 'Purple Rain']['released'], 1984)
 
 
     # def test_delete_record(self):
