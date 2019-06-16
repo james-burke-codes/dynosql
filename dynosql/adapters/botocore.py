@@ -103,17 +103,18 @@ class BotocoreAdapter(object):
 
 
     def _get_keys(self, table_name, key):
-
+        logger.info(table_name)
+        logger.info(self.tables)
         try:
             partition_key_value, sort_key_value = key
             keys = {
-                self.tables[table_name].partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.tables[table_name].partition_key[1]]: str(partition_key_value) },
-                self.tables[table_name].sort_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.tables[table_name].sort_key[1]]: str(sort_key_value) }
+                self.tables[table_name]['partition_key'][0]: { DYNAMODB_DATATYPES_LOOKUP[self.tables[table_name]['partition_key'][1]]: str(partition_key_value) },
+                self.tables[table_name]['sort_key'][0]: { DYNAMODB_DATATYPES_LOOKUP[self.tables[table_name]['sort_key'][1]]: str(sort_key_value) }
             }
         except ValueError:
             partition_key_value, sort_key_value = (key, None,)
             keys = {
-                self.tables[table_name].partition_key[0]: { DYNAMODB_DATATYPES_LOOKUP[self.tables[table_name].partition_key[1]]: str(partition_key_value) }
+                self.tables[table_name]['partition_key'][0]: { DYNAMODB_DATATYPES_LOOKUP[self.tables[table_name]['partition_key'][1]]: str(partition_key_value) }
             }
         except TypeError:
             raise KeyError('Table was not defined with a sort key')
