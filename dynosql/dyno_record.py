@@ -12,15 +12,15 @@ class DynoRecord(object):
     """ DynoRecord is the wrapper class around each record
 
     """
-    def __init__(self, adapter, table_name, key, attributes=None):
+    def __init__(self, adapter, table_name, primary_key, attributes=None):
         self.adapter = adapter
         self.table_name = table_name
-        self.keys = key
-        self.__json = { }
+        self.primary_key = primary_key
+        self._json = { }
 
         if not attributes:
             # Fetching data
-            self.adapter.get_item(table_name, key)
+            self._json = self.adapter.get_item(table_name, primary_key)
             # logger.info('fetching: %s' % str(self.keys))
 
             # try:
@@ -39,7 +39,7 @@ class DynoRecord(object):
             #     raise KeyError(str(e))
         else:
             # Inserting data
-            self.adapter.put_item(table_name, key, attributes)
+            self.adapter.put_item(table_name, primary_key, attributes)
             ## Migrate
             # logger.info('inserting: {%s : %s}' % (str(self.keys), attributes))
             # items = {
@@ -69,21 +69,21 @@ class DynoRecord(object):
     def __getitem__(self, key):
         """
         """
-        return self.adapter.get_item(self.table_name, key)
-        ## Migrate
-        # try:
-        #     logger.info('getitem: %s' % str(key))
-        #     return self.__json[key]
-        # except KeyError:
-        #     return self.__json
+        logger.info('getitem: %s' % str(key))
+        try:
+            return self._json[key]
+        except KeyError:
+            return self._json
 
 
     def __setitem__(self, key, attributes):
         """
         """
-        self.adapter.update_item(self.table_name, key, attributes)
+        logger.info('setitem: %s - %s' % (key, attributes))
+        # logger.info(self.primary_key)
+        self.adapter.update_item(self.table_name, self.primary_key, key, attributes)
         ## Migrate
-        # logger.info('setitem: %s - %s - %s' % (self.__json, str(key), attributes))
+        # logger.info('setitem: %s - %s - %s' % (self._json, str(key), attributes))
         # self.table.client.update_item(
         #     TableName=self.table.table_name,
         #     Key=self.keys,

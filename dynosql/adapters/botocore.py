@@ -102,11 +102,14 @@ class BotocoreAdapter(object):
         logger.info('initialised botocore...')
 
 
-    def _get_keys(self, table_name, key):
+    def _get_keys(self, table_name, primary_key):
+        """
+        Returns {'artist': {'S': 'Michael Jackson'}}
+        """
         logger.info(table_name)
         logger.info(self.tables)
         try:
-            partition_key_value, sort_key_value = key
+            partition_key_value, sort_key_value = primary_key
             keys = {
                 self.tables[table_name]['partition_key'][0]: {
                     DYNAMODB_DATATYPES_LOOKUP[self.tables[table_name]['partition_key'][1]]: str(partition_key_value)
@@ -116,7 +119,7 @@ class BotocoreAdapter(object):
                 }
             }
         except ValueError:
-            partition_key_value, sort_key_value = (key, None,)
+            partition_key_value, sort_key_value = (primary_key, None,)
             keys = {
                 self.tables[table_name]['partition_key'][0]: {
                     DYNAMODB_DATATYPES_LOOKUP[self.tables[table_name]['partition_key'][1]]: str(partition_key_value)
@@ -124,8 +127,21 @@ class BotocoreAdapter(object):
             }
         except TypeError:
             raise KeyError('Table was not defined with a sort key')
-
+        logger.info(keys)
         return keys
+
+
+    def _define_primary_key(self, table_name, description):
+        #'KeySchema': [{'AttributeName': 'song', 'KeyType': 'HASH'}]
+        #'AttributeDefinitions': [{'AttributeName': 'song', 'AttributeType': 'S'}]
+        #
+        keys = {}
+        for i, keyschema in enumerate(description['Table']['KeySchema']):
+            definition = description['Table']['AttributeDefinitions'][i]
+            if keyschema['KeyType'] == 'HASH':
+                self.tables[table_name]['partition_key'] = (keyschema['AttributeName'], DYNAMODB_DATATYPES_LOOKUP2[definition['AttributeType']])
+            else:
+                self.tables[table_name]['sort_key'] = (keyschema['AttributeName'], DYNAMODB_DATATYPES_LOOKUP2[definition['AttributeType']])
 
 
     def list_tables(self):
@@ -139,12 +155,13 @@ class BotocoreAdapter(object):
         logger.info(sort_key)
         KeySchema = []
         AttributeDefinitions = []
-        self.tables[table_name] = {
-            'partition_key': partition_key,
-            'sort_key': sort_key
-        }
+        self.tables[table_name] = {}
+        #     'partition_key': partition_key,
+        #     'sort_key': sort_key
+        # }
 
         if partition_key:
+            self.tables[table_name]['partition_key'] = partition_key
             KeySchema.append({ 'AttributeName': partition_key[0], 'KeyType': 'HASH' })
             AttributeDefinitions.append(
                 {
@@ -153,6 +170,7 @@ class BotocoreAdapter(object):
                 }
             )
         if sort_key:
+            self.tables[table_name]['sort_key'] = sort_key
             KeySchema.append({ 'AttributeName': sort_key[0], 'KeyType': 'RANGE' })
             AttributeDefinitions.append(
                 {
@@ -178,7 +196,7 @@ class BotocoreAdapter(object):
             return description
         except botocore.exceptions.ParamValidationError as e:
             description = self.client.describe_table(TableName=table_name)
-            #logger.info(description['Table'])
+            logger.info(description['Table'])
             partition_key = (
                 description['Table']['AttributeDefinitions'][0]['AttributeName'],
                 DYNAMODB_DATATYPES_LOOKUP2[description['Table']['AttributeDefinitions'][0]['AttributeType']]
@@ -190,6 +208,8 @@ class BotocoreAdapter(object):
                 )
             except IndexError:
                 pass
+
+            self._define_primary_key(table_name, description)
             return description
 
 
@@ -206,19 +226,20 @@ class BotocoreAdapter(object):
             pass
 
 
-    def get_item(self, table_name, key):
+    def get_item(self, table_name, primary_key):
         # WIP - figure out key with _get_keys function
-        logger.info('fetching: %s' % key)
-
+        logger.info('fetching: %s' % str(primary_key))
+        keys = self._get_keys(table_name, primary_key)
+        logger.info('_get_keys: %s' % str(keys))
         try:
-            response = self.table.client.get_item(
+            response = self.client.get_item(
                 TableName=table_name,
-                Key=self._get_keys(table_name, key)
+                Key=keys
             )
             if 'Item' in response:
                 return UNFLUFF(response)
             else:
-                raise KeyError("Record doesn't exist with key: %s" % str(key))
+                raise KeyError("Record doesn't exist with key: %s" % str(primary_key))
         except self.client.exceptions.ResourceNotFoundException as e:
             # botocore.exceptions.ClientError
             logger.error(e)
@@ -226,16 +247,16 @@ class BotocoreAdapter(object):
             raise KeyError(str(e))
 
 
-    def put_item(self, table_name, key, attributes):
+    def put_item(self, table_name, primary_key, attributes):
         # WIP - figure out key with _get_keys function
-        logger.info('inserting: {%s : %s}' % (key, attributes))
+        logger.info('inserting: {%s : %s}' % (str(primary_key), attributes))
         items = {
             attribute_name:
             {
                 DYNAMODB_DATATYPES_LOOKUP[type(attribute_value).__name__]: str(attribute_value)
             } for attribute_name, attribute_value in attributes.items()
         }
-        items = {**items, **self._get_keys(table_name, key)}
+        items = {**items, **self._get_keys(table_name, primary_key)}
         try:
             self.describe = self.client.put_item(
                 TableName=table_name,
@@ -245,27 +266,27 @@ class BotocoreAdapter(object):
             logger.error(e)
             raise KeyError(str(e))
 
-    def update_item(self, table_name, key, attributes):
-        logger.info('setitem: %s - %s - %s' % (self.__json, str(key), attributes))
+    def update_item(self, table_name, primary_key, key, value):
+        logger.info('setitem: %s - %s' % (str(key), value))
         self.client.update_item(
             TableName=table_name,
-            Key=self._get_keys(table_name, key),
+            Key=self._get_keys(table_name, primary_key),
             ExpressionAttributeNames={
                 '#X': str(key)
             },
             ExpressionAttributeValues={
                 ':y': {
-                    DYNAMODB_DATATYPES_LOOKUP[type(attributes).__name__]: str(attributes),
+                    DYNAMODB_DATATYPES_LOOKUP[type(value).__name__]: str(value),
                 },
             },
             UpdateExpression='SET #X = :y',
         )
 
 
-    def delete_item(self, table_name, key):
+    def delete_item(self, table_name, primary_key):
         self.client.delete_item(
             TableName=table_name,
-            Key=self._get_keys(table_name, key)
+            Key=self._get_keys(table_name, primary_key)
         )
 
     def filter(self, table_name, filter_expression):

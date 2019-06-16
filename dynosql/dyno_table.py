@@ -89,51 +89,51 @@ class DynoTable(object):
         #     self.__info = description
 
 
-    def __setitem__(self, key, attributes):
+    def __setitem__(self, primary_key, attributes):
         """ Inserts a new record or replaces an existing one
 
         Parameters:
-        key (tuple/string): can be a tuple if a composite key is used as primary key
+        primary_key (tuple/string): can be a tuple if a composite key is used as primary key
             otherwise a string containing the partition key
         atttributes (dict): additional attributes
 
         Return:
         None: It is an assignment operator so cannot return a response
         """
-        logger.info('setitem: %s - %s' % (key, attributes))
+        logger.info('setitem: %s - %s' % (primary_key, attributes))
         #DynoRecord(self, self._get_keys(key), attributes)
-        DynoRecord(self.adapter, self.table_name, key, attributes)
+        DynoRecord(self.adapter, self.table_name, primary_key, attributes)
 
 
-    def __getitem__(self, key):
+    def __getitem__(self, primary_key):
         """ Retreive record with key
 
         Parameters:
-        key (tuple/string): composite/primary key for the record
+        primary_key (tuple/string): composite/primary key for the record
             otherwise a string containing the partition key
 
         Return:
         dict: Returns record from DynamoDB
         """
-        logger.info('getitem: %s' % str(key))
+        logger.info('getitem: %s' % str(primary_key))
         ## migration
         #return DynoRecord(self, self._get_keys(key))
-        return DynoRecord(self.adapter, self.table_name, key)
+        return DynoRecord(self.adapter, self.table_name, primary_key)
 
 
-    def __delitem__(self, key):
+    def __delitem__(self, primary_key):
         """ Delete record from a table
 
         Parameters:
-        key (string/tuple): composite/primary key for the record
+        primary_key (string/tuple): composite/primary key for the record
         """
-        logger.info('delete: %s' % str(key))
+        logger.info('delete: %s' % str(primary_key))
         ## migration
         # self.client.delete_item(
         #     TableName=self.table_name,
         #     Key=self._get_keys(key)
         # )
-        self.adapter.delete_item(self.table_name, key)
+        self.adapter.delete_item(self.table_name, primary_key)
 
 
     def __del__(self):
