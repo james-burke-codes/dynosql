@@ -70,26 +70,27 @@ class FunctionalTestCase(unittest.TestCase):
         self.assertEqual(self.tables['music']['Prince', 'Purple Rain']['released'], 1984)
 
 
-    # def test_delete_record(self):
-    #     self.tables['music'] = self.dyno(table_name='music', partition_key=('artist', 'str',), sort_key=('song', 'str',))
-    #     self.tables['music']['Prince', 'Purple Rain'] = {'released': 1983, 'album': 'Purple Rain'}
-    #     self.tables['music']['Prince', 'Raspberry Beret'] = {'released': 1985, 'album': 'Around the World in a Day'}
-    #     del self.tables['music']['Prince', 'Purple Rain']
+    def test_delete_record(self):
+        self.tables['music'] = self.dyno(table_name='music', partition_key=('artist', 'str',), sort_key=('song', 'str',))
+        self.tables['music']['Prince', 'Purple Rain'] = {'released': 1983, 'album': 'Purple Rain'}
+        self.tables['music']['Prince', 'Raspberry Beret'] = {'released': 1985, 'album': 'Around the World in a Day'}
+        del self.tables['music']['Prince', 'Purple Rain']
 
-    #     with self.assertRaises(KeyError):
-    #         self.tables['music']['Prince', 'Purple Rain']
+        with self.assertRaises(KeyError):
+            self.tables['music']['Prince', 'Purple Rain']
 
 
-    # def test_filter_on_non_key(self):
-    #     self.tables['music'] = self.dyno(table_name='music', partition_key=('artist', 'str',), sort_key=('song', 'str',))
-    #     self.tables['music']['Prince', 'Purple Rain'] = {'released': 1983, 'album': 'Purple Rain'}
-    #     self.tables['music']['Prince', 'Raspberry Beret'] = {'released': 1985, 'album': 'Around the World in a Day'}
+    def test_filter_on_non_key(self):
+        self.tables['music'] = self.dyno(table_name='music', partition_key=('artist', 'str',), sort_key=('song', 'str',))
+        self.tables['music']['Prince', 'Purple Rain'] = {'released': 1983, 'album': 'Purple Rain'}
+        self.tables['music']['Prince', 'Raspberry Beret'] = {'released': 1985, 'album': 'Around the World in a Day'}
 
-    #     with self.subTest(name="equal comparison"):
-    #         logger.info('Test: released == 1983')
-    #         self.assertEqual(self.tables['music'].filter(
-    #             self.tables['music'].released == 1983
-    #         )[0]['album'], 'Purple Rain')
+        with self.subTest(name="equal comparison"):
+            logger.info('Test: released == 1983')
+            logger.info(self.tables['music'].filter(self.tables['music'].released == 1983))
+            self.assertEqual(self.tables['music'].filter(
+                self.tables['music'].released == 1983
+            )[0]['album'], 'Purple Rain')
 
     # with self.subTest(name="equal comparison"):
     #     logger.info('Test: released == 1983 and released == 1984')
