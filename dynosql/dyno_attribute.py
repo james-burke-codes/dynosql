@@ -13,6 +13,11 @@ class DynoAttribute(object):
         self.query = (self.name, '=', value)
         return self.query
 
-    def __and__(self, value):
-        logger.info('%s and %s' % (self.name, value))
+    def __ne__(self, value):
+        logger.info('%s != %s' % (self.name, value))
+        self.query = (self.name, '!=', value)
+        return self.query
+
+    # def __and__(self, value):
+    #     logger.info('%s and %s' % (self.name, value))
         
